@@ -1,0 +1,1072 @@
+'''
+This script makes a gaussian fit to the emission lines of AGN spectra
+It is needed a parentFold, the spectrum in which the fit is going to be made and the initial estimation of the fit
+'''
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker as tk
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from astropy.io import fits
+from astropy.constants import c
+from pyspeckit import speclines as pylines
+import Ofuncts
+from plot_refer_lines import refer_plot
+from plot_broad import broad_plot
+from DefRegionLines import DefRegionLines
+from FitThirdComp import FitThirdComp
+import lmfit
+import scipy.stats as stats
+import os
+
+##################################################################################################################
+# DEFINE THE FITTING FUNCTION FOR 1, 1+B, 2, 2+B COMPONENTS USING LMFIT AND THE EPSILON AND AIC CRITERIUM
+#
+def FirstFittingFunction(galaxy,galaxy2,l,data_cor,mu0,sig0,amp0,sig20,amp20,sig30,amp30,mu1,sig1,amp1,sig21,amp21,sig31,amp31,l2,l3,l5,l6,l9,l10):
+    # 
+    # Start the parameters for the LINEAR fit
+    in_slope = 0.
+    in_intc  = data_cor[0]
+
+    # Redefine the lambda zone with the first and last zones
+    newl = l[np.where(l<l[1])[0][-1]+5:np.where(l>6250.)[0][0]-10]
+    zone_O_N = l[np.where(l<6450.)[0][-1]+10:np.where(l>l9)[0][0]-10]
+    zone_N_S = l[np.where(l<l6)[0][-1]+30:np.where(l>l3)[0][0]-30]
+    newl = np.append(newl,zone_O_N)
+    newl = np.append(newl,zone_N_S)
+    newl = np.append(newl,l[-100:-1])
+    # now we do the same but with the flux data (y vector)
+    newflux = data_cor[np.where(l<l[1])[0][-1]+5:np.where(l>6250.)[0][0]-10]
+    zon_O_N = data_cor[np.where(l<6450.)[0][-1]+10:np.where(l>l9)[0][0]-10]
+    zon_N_S = data_cor[np.where(l<l6)[0][-1]+30:np.where(l>l3)[0][0]-30]
+    newflux = np.append(newflux,zon_O_N)
+    newflux = np.append(newflux,zon_N_S)
+    newflux = np.append(newflux,data_cor[-100:-1])
+
+    ############## Standard deviation of the continuum ###############
+    #
+    # In order to determine if the lines need one more gaussian to be fit correctly, we apply the 
+    # condition that the std dev of the continuum should be higher than 3 times the std dev of 
+    # the residuals of the fit of the line. 
+    # We have to calculate the stddev of the continuum in a place where there are no lines 
+    # Calculate the std dev of a part of the continuum without lines nor contribution of them
+    std0 = np.where(l>6450.)[0][0]
+    std1 = np.where(l<6500.)[0][-1]
+    stadev = np.std(data_cor[std0:std1])
+
+    ############################# Start the fit and the MODEL ####################################
+    #
+    # First we have to initialise the model in the Halpha+NII lines by doing
+    lin_mod = lmfit.Model(Ofuncts.linear)
+    one_mod = lmfit.Model(Ofuncts.twogaussian)
+    two_mod = lmfit.Model(Ofuncts.funcSII2comp)
+    three_mod = lmfit.Model(Ofuncts.funcSII3comp)
+
+    # and initialise the model in the whole spectra for several different models
+    comp_mod = lmfit.Model(Ofuncts.funcgauslin)
+    broad_mod = lmfit.Model(Ofuncts.funcbroad)
+    twocomp_mod = lmfit.Model(Ofuncts.func2com)
+    threecomp_mod = lmfit.Model(Ofuncts.func3com)
+    twobroadcomp_mod = lmfit.Model(Ofuncts.func2bcom)
+    threebroadcomp_mod = lmfit.Model(Ofuncts.func3bcom)
+
+    # We make the linear fit only with some windows of the spectra and calculate the 
+    # straight line to introduce it in the formula
+    linresu  = lin_mod.fit(newflux,slope=in_slope,intc=in_intc,x=newl)
+    new_slop = linresu.values['slope']
+    new_intc = linresu.values['intc']
+    lin_data_fin = (linresu.values['slope']*l+linresu.values['intc'])
+
+    # Now we define the initial guesses and the constraints
+    params1 = lmfit.Parameters()
+    params2 = lmfit.Parameters()
+    params3 = lmfit.Parameters()
+
+    sl = lmfit.Parameter('slop', value=new_slop,vary=False)
+    it = lmfit.Parameter('intc', value=new_intc,vary=False)
+
+    meth = 'S'#input('Which method to be applied? ("S"/"O", not "M1"/"M2"): ')  # Method to fit
+
+    # Define the parent Folder to save the data depending on the method
+    if not os.path.exists(path+str(galaxy)+'_'+str(galaxy2)+'_results/'+meth+'_method'):
+        os.mkdir(path+str(galaxy)+'_'+str(galaxy2)+'_results/'+meth+'_method')
+
+    parentFold = path+str(galaxy)+'_'+str(galaxy2)+'_results/'+meth+'_method/'
+
+    # -------------
+    # add with tuples: (NAME VALUE VARY MIN  MAX  EXPR  BRUTE_STEP)
+    if meth == 'S':
+        cd1 = lmfit.Parameter('mu_0', value=mu0)
+        de = lmfit.Parameter('sig_0', value=sig0,min=0.)#,max=6.)
+        ef = lmfit.Parameter('amp_0', value=amp0,min=0.)
+        fg = lmfit.Parameter('mu_1', value=mu1,expr='mu_0*(6716.44/6730.82)')
+        gh = lmfit.Parameter('sig_1', value=sig1,expr='sig_0')
+        hi = lmfit.Parameter('amp_1', value=amp1,min=0.)
+        # second components
+        aaa = lmfit.Parameter('mu_20', value=mu0)
+        aab = lmfit.Parameter('sig_20', value=sig20,min=0)#6.,max=12.)
+        aac = lmfit.Parameter('amp_20', value=amp20,min=0.)
+        aad = lmfit.Parameter('mu_21', value=mu1,expr='mu_20*(6716.44/6730.82)')
+        aae = lmfit.Parameter('sig_21', value=sig21,expr='sig_20')
+        aaf = lmfit.Parameter('amp_21', value=amp21,min=0.)
+        # third components 
+        aba = lmfit.Parameter('mu_30',value=mu0)
+        abb = lmfit.Parameter('sig_30', value=sig30,min=0.)
+        abc = lmfit.Parameter('amp_30',value=amp30,min=0.)
+        abd = lmfit.Parameter('mu_31',value=mu1,expr='mu_30*(6716.44/6730.82)')
+        abe = lmfit.Parameter('sig_31', value=sig31,min=0.)
+        abf = lmfit.Parameter('amp_31',value=amp31,min=0.)
+    elif meth == 'O':
+        cd1 = lmfit.Parameter('mu_0', value=mu0)
+        de = lmfit.Parameter('sig_0', value=sig0,min=0.)#max=6.)
+        ef = lmfit.Parameter('amp_0', value=amp0,min=0.)
+        fg = lmfit.Parameter('mu_1', value=mu1,expr='mu_0*(6363.77/6300.30)')
+        gh = lmfit.Parameter('sig_1', value=sig1,expr='sig_0')
+        hi = lmfit.Parameter('amp_1', value=amp1,min=0.)
+        # second components
+        aaa = lmfit.Parameter('mu_20', value=mu0)
+        aab = lmfit.Parameter('sig_20', value=sig20,min=0.)#min=6.,max=12.)
+        aac = lmfit.Parameter('amp_20', value=amp20,min=0.)
+        aad = lmfit.Parameter('mu_21', value=mu1,expr='mu_20*(6363.77/6300.30)')
+        aae = lmfit.Parameter('sig_21', value=sig21,expr='sig_20')
+        aaf = lmfit.Parameter('amp_21', value=amp21,min=0.)
+        # third components 
+        aba = lmfit.Parameter('mu_30',value=mu0)
+        abb = lmfit.Parameter('sig_30', value=sig30,min=0.)
+        abc = lmfit.Parameter('amp_30',value=amp30,min=0.)
+        abd = lmfit.Parameter('mu_31',value=mu1,expr='mu_30*(6363.77/6300.30)')
+        abe = lmfit.Parameter('sig_31', value=sig31,min=0.)
+        abf = lmfit.Parameter('amp_31',value=amp31,min=0.)
+
+    
+    params1.add_many(sl,it,cd1,de,ef,fg,gh,hi)
+    params2.add_many(sl,it,cd1,de,ef,fg,gh,hi,aaa,aab,aac,aad,aae,aaf)
+    params3.add_many(sl,it,cd1,de,ef,fg,gh,hi,aaa,aab,aac,aad,aae,aaf,aba,abb,abc,abd,abe,abf)
+
+    ###############################################################################################
+    # Make the fit using lmfit
+    oneresu = one_mod.fit(data_cor,params1,x=l)
+    tworesu = two_mod.fit(data_cor,params2,x=l)
+    threeresu = three_mod.fit(data_cor,params3,x=l)
+    '''
+    if oneresu.message == 'One or more variable did not affect the fit. Could not estimate error-bars.':
+        print('No lines found to fit...')
+        print('Continue to the next spectra...')
+        prov_VN.append(np.nan),prov_VS.append(np.nan),prov_VB.append(np.nan),prov_eVN.append(np.nan),prov_eVS.append(np.nan),prov_eVB.append(np.nan),prov_SN.append(np.nan),prov_SS.append(np.nan),prov_SB.append(np.nan),prov_eSN.append(np.nan),prov_eSS.append(np.nan),prov_eSB.append(np.nan),prov_notSN.append(np.nan),prov_noteSN.append(np.nan),prov_notVN.append(np.nan),prov_noteVN.append(np.nan),prov_fHa.append(np.nan),prov_fS1.append(np.nan),prov_fS2.append(np.nan),prov_fN1.append(np.nan),prov_fN2.append(np.nan),prov_fSHa.append(np.nan),prov_fSN1.append(np.nan),prov_fSN2.append(np.nan),prov_fSS1.append(np.nan),prov_fSS2.append(np.nan)
+        continue
+    if oneresu.best_values['amp_3'] < 3*stadev:
+        prov_VN.append(np.nan),prov_VS.append(np.nan),prov_VB.append(np.nan),prov_eVN.append(np.nan),prov_eVS.append(np.nan),prov_eVB.append(np.nan),prov_SN.append(np.nan),prov_SS.append(np.nan),prov_SB.append(np.nan),prov_eSN.append(np.nan),prov_eSS.append(np.nan),prov_eSB.append(np.nan),prov_notSN.append(np.nan),prov_noteSN.append(np.nan),prov_notVN.append(np.nan),prov_noteVN.append(np.nan),prov_fHa.append(np.nan),prov_fS1.append(np.nan),prov_fS2.append(np.nan),prov_fN1.append(np.nan),prov_fN2.append(np.nan),prov_fSHa.append(np.nan),prov_fSN1.append(np.nan),prov_fSN2.append(np.nan),prov_fSS1.append(np.nan),prov_fSS2.append(np.nan)
+        print('The amplitude of the Halpha line is not higher than 3 times the stadev of the continuum --> not line found to fit!')
+        continue
+    '''
+
+    with open(parentFold+'fit_oneC_result.txt', 'w') as fh:
+        fh.write(oneresu.fit_report())
+    with open(parentFold+'fit_twoC_result.txt', 'w') as fh:
+        fh.write(tworesu.fit_report())
+    with open(parentFold+'fit_threeC_result.txt', 'w') as fh:
+        fh.write(threeresu.fit_report())
+
+    ###############################################################################################
+    # Select if one or two components in the SII lines and then apply to the rest
+    ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2 = refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l5,l6,l9,l10,l11,l12,l13,l14,std0,std1)
+    #if oneresu.chisqr < tworesu.chisqr:
+    #    trigger = 'Y'
+    #else:
+    if ep_1 > 3 and ep_2 > 3:
+        trigger = 'N'
+    else:
+        trigger = 'Y'
+    #trigger='Y'   #input('Is the fit good enough with one component? ("Y"/"N"): ')
+
+    return std0,std1,stadev,linresu,lin_data_fin,sl,it,meth,oneresu,tworesu,threeresu,trigger,comp_mod,broad_mod,twocomp_mod,twobroadcomp_mod,threecomp_mod,threebroadcomp_mod,ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2
+
+
+##################################################################################################################
+# 					M       A       I        N						 #
+##################################################################################################################
+######################### Define the PATHS to the data and extract the spectra ###################################
+##################################################################################################################
+#
+CubePath  = "/mnt/data/lhermosa/MEGARA/DATA/NGC1052/MixCubeRV/PPXF/FinalSubtract/"
+cubePath  = "/mnt/data/lhermosa/MEGARA/DATA/NGC1052/MixCubeRV/EmissionLines/"
+if not os.path.exists(cubePath+'results_nolim_SII_1610/'): os.mkdir(cubePath+"results_nolim_SII_1610/")
+path = cubePath+'results_nolim_SII_1610/'#_2comp1broad_lim300/'
+cubo = 'cubo_NGC1052'
+z = 0.005
+
+'''
+# Select all the files (sustitute of the previous lines)
+cube = fits.open(cubePath+cubo)
+datos = cube[0].data
+header = cube[0].header
+init_lambda = header['CRVAL3']
+fin_lambda = header['CRVAL3']+(len(datos)*header['CDELT3'])
+step = header['CDELT3']
+
+cube.close()
+# Define the wavelength range
+l_init = np.linspace(init_lambda,fin_lambda,len(datos))
+gal_i,x_i = np.shape(datos[0])
+'''
+listDir = os.listdir(CubePath)
+headName = listDir[0][:16]
+
+x = np.arange(0,33,1)
+#gal = np.arange(19,30,1)
+gal = np.arange(0,30,1)
+
+l_init = np.genfromtxt(CubePath+listDir[0])[:,0]
+datos = np.zeros((len(l_init),30,33))
+for i in x:
+  for ia in gal:
+    try: 
+        DatProv = np.genfromtxt(CubePath+headName+str(i)+'_'+str(ia)+'.txt')[:,1]
+    except IOError: 
+        DatProv = np.zeros(len(l_init))
+    datos[:,ia,i] = DatProv
+    if not os.path.exists(path+str(i)+'_'+str(ia)+'_results'):
+        os.mkdir(path+str(i)+'_'+str(ia)+'_results')
+        print('Folder '+path+str(i)+'_'+str(ia)+'_results created in path')
+################################### Initial parameters needed #####################################
+# Rest values of the line wavelengths 
+l_Halpha = pylines.optical.lines['H_alpha'][0]
+l_NII_1  = pylines.optical.lines['NIIa'][0]     # 6548.05
+l_NII_2  = pylines.optical.lines['NIIb'][0]     # 6583.45
+l_SII_1  = pylines.optical.lines['SIIa'][0]     # 6716.44
+l_SII_2  = pylines.optical.lines['SIIb'][0]     # 6730.82
+l_OI_1 = pylines.optical.lines['OI'][0] # 6300.304
+l_OI_2 = 6363.77
+
+# Constants and parameters
+v_luz = c.value/10**3 # km/s
+plate_scale = 0.2  #arcsec per pix
+ang_to_pix = 0.28   # Angstrom per pixel - LR-R = 0.28 AA/pix
+fwhm = 2*np.sqrt(2*np.log(2)) # por sigma
+sigma_per_arc = 82  # km/s per arcsec derived from the FWHM per arcsec
+pix_to_v = 50.      # km/s per arcsec BASADO EN R = c/deltaV
+
+sig_inst = 0.654   # A  delta lambda (FWHM) = 3.6 A
+sig_inicial = 1.0
+
+meth = 'S'#input('Which method to be applied? ("S"/"O", not "M1"/"M2"): ')  # Method to fit
+
+######################################################################
+########## Fitting process for all the spectra in a row ##############
+######################################################################
+# We define the arrays where we are going to store the results from the fit
+# Velocity, velocity dispersion and flux for each component and line.
+sig_narrow,sig_narrow2,sig_second,sig_broad = [],[],[],[]
+esig_narrow,esig_narrow2,esig_second,esig_broad = [],[],[],[]
+vel_narrow,vel_narrow2,vel_second,vel_broad = [],[],[],[]
+evel_narrow,evel_narrow2,evel_second,evel_broad = [],[],[],[]
+vel_narrow_NoCor,evel_narrow_NoCor,sig_narrow_NoCor,esig_narrow_NoCor = [],[],[],[]
+flux_Ha,flux_NII1,flux_NII2,flux_SII1,flux_SII2 = [],[],[],[],[]
+flux2_Ha,flux2_NII1,flux2_NII2,flux2_SII1,flux2_SII2 = [],[],[],[],[]
+flux_second_Ha,flux_second_NII1,flux_second_NII2,flux_second_SII1,flux_second_SII2 = [],[],[],[],[]
+flux_OI1,flux_OI2,flux2_OI1,flux2_OI2,flux_second_OI1,flux_second_OI2 = [],[],[],[],[],[]
+epsilon1,epsilon2,epsilon3,AIC1,AIC2,AIC3,BIC1,BIC2,BIC3 = [],[],[],[],[],[],[],[],[]
+for galaxy2 in gal:
+  prov_SN,prov_eSN,prov_SN2,prov_eSN2,prov_SS,prov_eSS,prov_SB,prov_eSB = [],[],[],[],[],[],[],[]
+  prov_notSN,prov_noteSN,prov_notVN,prov_noteVN = [],[],[],[]
+  prov_VS,prov_eVS,prov_VN,prov_eVN,prov_VN2,prov_eVN2,prov_VB,prov_eVB = [],[],[],[],[],[],[],[]
+  prov_fHa,prov_fN1,prov_fN2,prov_fS1,prov_fS2 = [],[],[],[],[]
+  prov_f2Ha,prov_f2N1,prov_f2N2,prov_f2S1,prov_f2S2 = [],[],[],[],[]
+  prov_fSHa,prov_fSN1,prov_fSN2,prov_fSS1,prov_fSS2 = [],[],[],[],[]
+  prov_fO1,prov_fO2,prov_f2O1,prov_f2O2,prov_fSO1,prov_fSO2 = [],[],[],[],[],[]
+  prov_e1,prov_e2,prov_e3,prov_a1,prov_a2,prov_a3,prov_b1,prov_b2,prov_b3 = [],[],[],[],[],[],[],[],[]
+  for galaxy in x:
+    print('')
+    print('Starting the fit for spec_'+str(galaxy)+'_'+str(galaxy2))
+    print('Done {:.2f} %'.format(100*((galaxy+1)+(galaxy2*33))/990.))
+    print('')
+    # Define the path to save the data
+    l = np.copy(l_init)#*10000)-red_lambda_cor_SII2
+    data = datos[:,galaxy2,galaxy]
+    beg_point = np.where(l>6200)[0][0]
+    end_point = np.where(l<6850)[0][-1]
+    l = l[beg_point:end_point]
+    data_cor = data[beg_point:end_point]
+    
+    ########################## Transform data and plot the spectra ##########################
+    # Plot the spectra and check that everything is ok
+    plt.close('all')
+    plt.subplot(211)
+    plt.plot(l,data_cor,'k',linewidth=1.)
+    plt.xlabel(r'Wavelength ($\AA$)')
+    plt.ylabel(r'Flux (erg $\rm s^{-1} cm^{-2} \AA^{-1}$)')
+    plt.xlim(l[0],l[-1])
+    plt.subplot(212)
+    plt.plot(l_init[400:-400],datos[400:-400,galaxy2,galaxy],'k',linewidth=1.)
+    plt.xlim(l_init[400],l_init[-400])
+    plt.xlabel('Wavelength ($\AA$)')
+    plt.ylabel('Flux ($erg/s/cm^{2} / \AA$)')
+    plt.savefig(path+str(galaxy)+'_'+str(galaxy2)+'_results/spec.png')
+
+    # some points may be nan, we have to create a mask to avoid them
+    # when applying the mask, all nan values will turn to 0
+    # if all points are 0, then break the loop and take the next spec
+    mask = np.isnan(data_cor)
+    data_cor[mask] = 0
+    if np.any(data_cor) == 0:
+        print('For the spectra in '+str(galaxy)+'_'+str(galaxy2)+' all the datapoints where nan')
+        print('Continue...')
+        prov_VN.append(np.nan),prov_VN2.append(np.nan),prov_VS.append(np.nan),prov_VB.append(np.nan),prov_eVN.append(np.nan),prov_eVN2.append(np.nan),prov_eVS.append(np.nan),prov_eVB.append(np.nan),prov_SN.append(np.nan),prov_SN2.append(np.nan),prov_SS.append(np.nan),prov_SB.append(np.nan),prov_eSN.append(np.nan),prov_eSN2.append(np.nan),prov_eSS.append(np.nan),prov_eSB.append(np.nan),prov_notSN.append(np.nan),prov_noteSN.append(np.nan),prov_notVN.append(np.nan),prov_noteVN.append(np.nan),prov_fHa.append(np.nan),prov_fN1.append(np.nan),prov_fN2.append(np.nan),prov_fS1.append(np.nan),prov_fS2.append(np.nan),prov_fO1.append(np.nan),prov_fO2.append(np.nan),prov_f2Ha.append(np.nan),prov_f2N1.append(np.nan),prov_f2N2.append(np.nan),prov_f2S1.append(np.nan),prov_f2S2.append(np.nan),prov_f2O1.append(np.nan),prov_f2O2.append(np.nan),prov_fSHa.append(np.nan),prov_fSN1.append(np.nan),prov_fSN2.append(np.nan),prov_fSS1.append(np.nan),prov_fSS2.append(np.nan),prov_fSO1.append(np.nan),prov_fSO2.append(np.nan),prov_e1.append(np.nan),prov_e2.append(np.nan),prov_e3.append(np.nan),prov_a1.append(np.nan),prov_a2.append(np.nan),prov_a3.append(np.nan),prov_b1.append(np.nan),prov_b2.append(np.nan),prov_b3.append(np.nan)
+        continue
+
+    parentFold = path+str(galaxy)+'_'+str(galaxy2)+'_results/'
+
+    ############################ MAIN ################################
+    ##################################################################
+    l1 = 6765. #input('lambda inf for SII 2 (angs)?: ') 6725.
+    l2 = 6790. #input('lambda sup for SII 2 (angs)?: ') 6740.
+    l3 = 6730. #input('lambda inf for SII 1 (angs)?: ') 6710.
+    l4 = 6765. #input('lambda sup for SII 1 (angs)?: ') 6725.
+    l5 = 6610. #input('lambda inf for NII 2 (angs)?: ') 6575.
+    l6 = 6635. #input('lambda sup for NII 2 (angs)?: ') 6595.
+    l7 = 6590. #input('lambda inf for Halpha (angs)?: ') 6555.
+    l8 = 6610. #input('lambda sup for Halpha (angs)?: ') 6575.
+    l9 = 6560. #input('lambda inf for NII 1 (angs)?: ') 6535.
+    l10 = 6590. #input('lambda sup for NII 1 (angs)?: ') 6555.
+    l11 = 6300.	# lambda inf for OI 1 (angs)
+    l12 = 6350.	# lambda sup for OI 1 (angs)
+    l13 = 6380.	# lambda inf for OI 2 (angs)
+    l14 = 6410.	# lambda sup for OI 2 (angs)
+    ##################################################################
+    # Retrieve the inital conditions and values for the lines
+    # the function selects the regions in which the lines are expected
+    # given the redshift of the source
+    sig0,sig20,sig30,mu0,amp0,amp20,amp30,sig1,sig21,sig31,mu1,amp1,amp21,amp31,sig2,sig22,sig32,mu2,amp2,amp22,amp32,sig3,sig23,sig33,mu3,amp3,amp23,amp33,sig4,sig24,sig34,mu4,amp4,amp24,amp34,sig5,sig25,sig35,mu5,amp5,amp25,amp35,sig6,sig26,sig36,mu6,amp6,amp26,amp36 = DefRegionLines(l,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,sig_inicial,data_cor)
+
+    # Fit the SII lines
+    if meth == 'S':
+        std0,std1,stadev,linresu,lin_data_fin,sl,it,meth,oneresu,tworesu,threeresu,trigger,comp_mod,broad_mod,twocomp_mod,twobroadcomp_mod,threecomp_mod,threebroadcomp_mod,ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2 = FirstFittingFunction(galaxy,galaxy2,l,data_cor,mu0,sig0,amp0,sig20,amp20,sig30,amp30,mu1,sig1,amp1,sig21,amp21,sig31,amp31,l2,l3,l5,l6,l9,l10)
+    elif meth == 'O':
+        std0,std1,stadev,linresu,lin_data_fin,sl,it,meth,oneresu,tworesu,threeresu,trigger,comp_mod,broad_mod,twocomp_mod,twobroadcomp_mod,threecomp_mod,threebroadcomp_mod,ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2 = FirstFittingFunction(galaxy,galaxy2,l,data_cor,mu5,sig5,amp5,sig25,amp25,sig35,amp35,mu6,sig6,amp6,sig26,amp26,sig36,amp36,l2,l3,l5,l6,l9,l10)
+    prov_e1.append(ep_1),prov_e2.append(ep2_1),prov_e3.append(ep3_1)
+    prov_a1.append(oneresu.aic),prov_a2.append(tworesu.aic),prov_a3.append(threeresu.aic)
+    prov_b1.append(oneresu.bic),prov_b2.append(tworesu.bic),prov_b3.append(threeresu.bic)
+    
+    if trigger == 'Y':
+        # There is no secondary or third component
+        # thus one can add a 0 value directly here to the second comp list
+        prov_SS.append(np.nan),prov_SN2.append(np.nan)
+        prov_VS.append(np.nan),prov_VN2.append(np.nan)
+        prov_eSS.append(np.nan),prov_eSN2.append(np.nan)
+        prov_eVS.append(np.nan),prov_eVN2.append(np.nan)
+        prov_fSHa.append(np.nan),prov_fSN1.append(np.nan),prov_fSN2.append(np.nan),prov_fSS1.append(np.nan),prov_fSS2.append(np.nan),prov_fSO1.append(np.nan),prov_fSO2.append(np.nan),prov_f2Ha.append(np.nan),prov_f2N1.append(np.nan),prov_f2N2.append(np.nan),prov_f2S1.append(np.nan),prov_f2S2.append(np.nan),prov_f2O1.append(np.nan),prov_f2O2.append(np.nan)
+
+        params = lmfit.Parameters() # initialise the parameters
+        # Now we define the initial guesses and the constraints
+        if meth == 'S':
+            cd1 = lmfit.Parameter('mu_0', value=oneresu.values['mu_0'],vary=False)
+            de = lmfit.Parameter('sig_0', value=oneresu.values['sig_0'],vary=False)
+            ef = lmfit.Parameter('amp_0', value=oneresu.values['amp_0'],vary=False)
+            fg = lmfit.Parameter('mu_1', value=oneresu.values['mu_1'],vary=False)
+            gh = lmfit.Parameter('sig_1', value=oneresu.values['sig_1'],vary=False)
+            hi = lmfit.Parameter('amp_1', value=oneresu.values['amp_1'],vary=False)
+            ij = lmfit.Parameter('mu_2', value=mu2,expr='mu_0*(6583.45/6730.82)')
+            jk = lmfit.Parameter('sig_2', value=sig2,expr='sig_0')
+            kl = lmfit.Parameter('amp_2', value=amp2,min=0)
+            lm = lmfit.Parameter('mu_3', value=mu3,expr='mu_0*(6562.801/6730.82)')
+            mn = lmfit.Parameter('sig_3', value=sig3,expr='sig_0')
+            no = lmfit.Parameter('amp_3', value=amp3,min=0.)
+            op = lmfit.Parameter('mu_4', value=mu4,expr='mu_0*(6548.05/6730.82)')
+            pq = lmfit.Parameter('sig_4', value=sig4,expr='sig_0')
+            qr = lmfit.Parameter('amp_4', value=amp4,min=0.,expr='amp_2*(1./3.)')
+            rs = lmfit.Parameter('mu_5', value=mu5,expr='mu_0*(6300.304/6730.82)')
+            st = lmfit.Parameter('sig_5', value=sig5,expr='sig_0')
+            tu = lmfit.Parameter('amp_5', value=amp5,min=0.)
+            uv = lmfit.Parameter('mu_6', value=mu6,expr='mu_0*(6363.77/6730.82)')
+            vw = lmfit.Parameter('sig_6', value=sig6,expr='sig_0')
+            wy = lmfit.Parameter('amp_6', value=amp6,min=0.,expr='amp_5*(1./3.)')
+            params.add_many(sl,it,cd1,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,rs,st,tu,uv,vw,wy)
+
+        elif meth == 'O':
+            rs = lmfit.Parameter('mu_5', value=oneresu.values['mu_0'],vary=False)# mu5,expr='mu_0*(6300.304/6730.82)')
+            st = lmfit.Parameter('sig_5', value=oneresu.values['sig_0'],vary=False)
+            tu = lmfit.Parameter('amp_5', value=oneresu.values['amp_0'],vary=False)
+            uv = lmfit.Parameter('mu_6', value=oneresu.values['mu_1'],vary=False) #mu6,expr='mu_0*(6363.77/6730.82)')
+            vw = lmfit.Parameter('sig_6', value=oneresu.values['sig_1'],vary=False)
+            wy = lmfit.Parameter('amp_6', value=oneresu.values['amp_1'],vary=False) #amp6,min=0.,expr='amp_5*(1./3.)')
+            cd1 = lmfit.Parameter('mu_0', value=mu0,expr='mu_5*(6730.82/6300.304)')
+            de = lmfit.Parameter('sig_0', value=sig0,expr='sig_5')
+            ef = lmfit.Parameter('amp_0', value=amp0,min=0.)
+            fg = lmfit.Parameter('mu_1', value=mu1,expr='mu_5*(6716.44/6300.304)')
+            gh = lmfit.Parameter('sig_1', value=sig1,expr='sig_5')
+            hi = lmfit.Parameter('amp_1', value=amp1,min=0.)
+            ij = lmfit.Parameter('mu_2', value=mu2,expr='mu_5*(6583.45/6300.304)')
+            jk = lmfit.Parameter('sig_2', value=sig2,expr='sig_5')
+            kl = lmfit.Parameter('amp_2', value=amp2,min=0)
+            lm = lmfit.Parameter('mu_3', value=mu3,expr='mu_5*(6562.801/6300.304)')
+            mn = lmfit.Parameter('sig_3', value=sig3,expr='sig_5')
+            no = lmfit.Parameter('amp_3', value=amp3,min=0.)
+            op = lmfit.Parameter('mu_4', value=mu4,expr='mu_5*(6548.05/6300.304)')
+            pq = lmfit.Parameter('sig_4', value=sig4,expr='sig_5')
+            qr = lmfit.Parameter('amp_4', value=amp4,min=0.,expr='amp_2*(1./3.)')
+            params.add_many(sl,it,rs,st,tu,uv,vw,wy,cd1,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr)
+
+
+        # Initial guesses and fit
+        resu1 = comp_mod.fit(data_cor,params,x=l)
+        #lmfit.model.save_modelresult(resu1, parentFold+'one_modelresult.sav')
+        with open(parentFold+'fitone_result.txt', 'w') as fh:
+            fh.write(resu1.fit_report())
+        ########################### Calculate gaussians and final fit #############################
+        # Now we create and plot the individual gaussians of the fit
+        gaus1 = Ofuncts.gaussian(l,resu1.values['mu_0'],resu1.values['sig_0'],resu1.values['amp_0'])
+        gaus2 = Ofuncts.gaussian(l,resu1.values['mu_1'],resu1.values['sig_1'],resu1.values['amp_1'])
+        gaus3 = Ofuncts.gaussian(l,resu1.values['mu_2'],resu1.values['sig_2'],resu1.values['amp_2'])
+        gaus4 = Ofuncts.gaussian(l,resu1.values['mu_3'],resu1.values['sig_3'],resu1.values['amp_3'])
+        gaus5 = Ofuncts.gaussian(l,resu1.values['mu_4'],resu1.values['sig_4'],resu1.values['amp_4'])
+        gaus6 = Ofuncts.gaussian(l,resu1.values['mu_5'],resu1.values['sig_5'],resu1.values['amp_5'])
+        gaus7 = Ofuncts.gaussian(l,resu1.values['mu_6'],resu1.values['sig_6'],resu1.values['amp_6'])
+        fin_fit = resu1.best_fit
+        # one component
+        stdf_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-fin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
+        stdf_s1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]]-fin_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]])
+        stdf_n2 = np.std(data_cor[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10]-fin_fit[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10])
+        stdf_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-fin_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
+        stdf_n1 = np.std(data_cor[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]]-fin_fit[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]])
+        stdf_o1 = np.std(data_cor[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]]-fin_fit[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]])
+        stdf_o2 = np.std(data_cor[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]]-fin_fit[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]])
+        print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 components is... ')
+        print('         For SII2: '+str(stdf_s2/stadev)+' < 3')
+        print('         For SII1: '+str(stdf_s1/stadev)+' < 3')
+        print('         For NII2: '+str(stdf_n2/stadev)+' < 3')
+        print('         For Halpha: '+str(stdf_ha/stadev)+' < 3')
+        print('         For NII1: '+str(stdf_n1/stadev)+' < 3')
+
+        if os.path.exists(parentFold+'eps_adj'+str(meth)+'_1.txt'): os.remove(parentFold+'eps_adj'+str(meth)+'_1.txt')
+        np.savetxt(parentFold+'eps_adj'+str(meth)+'_1.txt',np.c_[stdf_s2/stadev,stdf_s1/stadev,stdf_n2/stadev,stdf_ha/stadev,stdf_n1/stadev,stdf_o2/stadev,stdf_o1/stadev,resu1.chisqr], ('%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f'),header=('SII2\tSII1\tNII2\tHa\tNII1\tOI1\tOI2\tChi2'))
+
+        if resu1.values['mu_0'] > 6800:
+            maxfS1,maxfS2,maxfN1,maxfHa,maxfN2,maxfO1,maxfO2 = 0.,0.,0.,0.,0.,0.,0.
+        else:
+            maxfS1 = fin_fit[np.where(abs(resu1.values['mu_0']-l)<0.5)[0][0]]
+            maxfS2 = fin_fit[np.where(abs(resu1.values['mu_1']-l)<0.5)[0][0]]
+            maxfN1 = fin_fit[np.where(abs(resu1.values['mu_2']-l)<0.5)[0][0]]
+            maxfHa = fin_fit[np.where(abs(resu1.values['mu_3']-l)<0.5)[0][0]]
+            maxfN2 = fin_fit[np.where(abs(resu1.values['mu_4']-l)<0.5)[0][0]]
+            maxfO1 = fin_fit[np.where(abs(resu1.values['mu_5']-l)<0.5)[0][0]]
+            maxfO2 = fin_fit[np.where(abs(resu1.values['mu_6']-l)<0.5)[0][0]]
+
+        # Estimate the sigma and velocities
+        sigS2 = pix_to_v*np.sqrt(oneresu.values['sig_0']**2-sig_inst**2)
+
+        if oneresu.params['sig_0'].stderr == None:
+            print('Problem determining the errors! First component sigma ')
+            esigS2 = 0.
+        elif oneresu.params['sig_0'].stderr != None:
+            esigS2 = pix_to_v*(2*oneresu.values['sig_0']*oneresu.params['sig_0'].stderr)/(np.sqrt(oneresu.values['sig_0']**2-sig_inst**2))
+
+        vS2 = v_luz*((resu1.values['mu_3']-l_Halpha)/l_Halpha)
+        if oneresu.params['mu_0'].stderr == None:
+            print('Problem determining the errors! First component ')
+            evS2 = 0.
+        elif oneresu.params['mu_0'].stderr != None:
+            evS2 = ((v_luz/l_SII_2)*oneresu.params['mu_0'].stderr)
+
+        if os.path.exists(parentFold+'v_sig_adj_1.txt'): os.remove(parentFold+'v_sig_adj_1.txt')
+        np.savetxt(parentFold+'v_sig_adj'+str(meth)+'_1.txt',np.c_[vS2,evS2,sigS2,esigS2],('%8.5f','%8.5f','%8.5f','%8.5f'),header=('v_ref\tev_ref\tsig_ref\tesig_ref'))
+        if os.path.exists(parentFold+'fluxes_1C.txt'): os.remove(parentFold+'fluxes_1C.txt')
+        np.savetxt(parentFold+'fluxes_1C.txt',np.c_[sum(gaus1),sum(gaus2),sum(gaus3),sum(gaus4),sum(gaus5),sum(gaus6),sum(gaus7)],('%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f'),header=('SII_6731\tSII_6716\tNII_6584\tHalpha\tNII_6548\tOI_6300\tOI_6363'))
+
+        # Saving the max flux of each line to do the final flux map
+        prov_fS2.append(sum(gaus1)),prov_fS1.append(sum(gaus2)),prov_fN2.append(sum(gaus3)),prov_fHa.append(sum(gaus4)),prov_fN1.append(sum(gaus5)),prov_fO1.append(sum(gaus6)),prov_fO2.append(sum(gaus7))
+
+        ############################ PLOT ############################
+        plt.close('all')
+        # MAIN plot
+        fig1   = plt.figure(1,figsize=(10, 9))
+        frame1 = fig1.add_axes((.1,.25,.85,.65))             # xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
+        plt.plot(l,data_cor,'k',linewidth=2)                 # Initial data
+        plt.plot(l[std0:std1],data_cor[std0:std1],'y',linewidth=4.)  # Zone where the stddev is calculated
+        plt.plot(l[std0:std1],data_cor[std0:std1],'k',linewidth=1)                   # Initial data
+        #plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),c='y',linestyle=(0, (5, 8)))#,label='Linear fit')
+        plt.plot(l,gaus1+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,gaus2+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,gaus3+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,gaus4+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,gaus5+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,gaus6+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,gaus7+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,fin_fit,'r-')
+        textstr = '\n'.join((r'$V_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(vS2,evS2),
+                         r'$\sigma_{SII_{2}}$ = '+ '{:.2f} +- {:.2f}'.format(sigS2,esigS2),
+                         #r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(maxfS2/maxfS1),
+                         r'$F_{H_{\alpha}}$ = '+ '{:.3f}'.format(maxfHa)+' $10^{-14}$'))
+                         #r'$\frac{F_{NII_{2}}}{F_{NII_{1}}}$ = '+ '{:.3f}'.format(maxfN2/maxfN1)))
+        frame1.set_xticklabels([])                      # Remove x-tic labels for the first frame
+        plt.ylabel(r'Flux (erg $\rm cm^{-2} s^{-1} \AA^{-1}$)',fontsize=19)
+        plt.tick_params(axis='both', labelsize=17)
+        plt.xlim(l[0],l[-1])
+        plt.gca().yaxis.set_major_locator(plt.MaxNLocator(prune='lower'))
+        #frame1.yaxis.set_major_formatter(tk.FormatStrFormatter('%.2f'))
+        plt.text(0.87,0.9,'N',color='g',transform=frame1.transAxes,fontsize=21)
+
+        # RESIDUAL plot
+        frame2 = fig1.add_axes((.1,.1,.85,.15))
+        plt.plot(l,np.zeros(len(l)),c='orange',linestyle='-')           # Line around zero
+        plt.plot(l,data_cor-fin_fit,c='k')              # Main
+        plt.xlabel(r'Wavelength ($\rm \AA$)',fontsize=19)
+        plt.ylabel('Residuals',fontsize=19)
+        plt.tick_params(axis='both', labelsize=17)
+        plt.xlim(l[0],l[-1])
+        plt.plot(l,np.zeros(len(l))+1.5*stadev,c='orange',linestyle=(0,(5,8)))  # 3 sigma upper limit
+        plt.plot(l,np.zeros(len(l))-1.5*stadev,c='orange',linestyle=(0,(5,8)))  # 3 sigma down limit
+        plt.ylim(-(3*stadev)*3,(3*stadev)*3)
+
+        plt.savefig(parentFold+'adj_full_1comp.pdf',format='pdf',bbox_inches='tight',pad_inches=0.2)
+        props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+        frame1.text(6250,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
+        plt.savefig(parentFold+'adj_full_1comp.png',bbox_inches='tight',pad_inches=0.2)
+
+        prov_VN.append(vS2),prov_eVN.append(evS2),prov_SN.append(sigS2),prov_eSN.append(esigS2)
+
+        ##############################################################
+	##############################################################
+        # Ask if a broad component is needed 
+        if stdf_n2 > 3 or stdf_ha > 3 or stdf_n1 > 3:
+             trigger2 = 'Y'
+        else:
+             trigger2 = 'N'
+        if galaxy >= 15 and galaxy <= 20 and galaxy2 >= 12 and galaxy2 <= 16: trigger2 = 'Y' #33  30
+        # Ask if a broad component is needed 
+        if trigger2 == 'N':
+            print('The final plots are already printed and have been already saved!')
+            print('No broad component from the BLR added to the fit of this spaxel')
+            # Append all the values to the corresponding vector
+            prov_SB.append(np.nan),prov_eSB.append(np.nan),prov_VB.append(np.nan),prov_eVB.append(np.nan)
+            np.savetxt(parentFold+'fit1comp_best_values.txt',np.c_[l,resu1.data,resu1.best_fit,lin_data_fin,gaus1,gaus2,gaus3,gaus4,gaus5,gaus6,gaus7],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tNarrow_SII6716\tNarrow_NII6584\tNarrow_Halpha\tNarrow_NII6548\tNarrow_OI6300\tNarrow_OI6363'))
+        elif trigger2 == 'Y':
+            # Now we define the initial guesses and the constraints
+            newxb = l[np.where(l>l9)[0][0]:np.where(l<l6)[0][-1]]
+            newyb = data_cor[np.where(l>l9)[0][0]:np.where(l<l6)[0][-1]]
+            sigb = 16.
+            mub  = mu3
+            ampb = amp3/3.
+            paramsbH = lmfit.Parameters()
+            # broad components
+            ab = lmfit.Parameter('mu_b',value=mub)#6605.,vary=False)
+            bc = lmfit.Parameter('sig_b',value=sigb,min=12.)#,vary=False) sig_inst)minbroad
+            yz = lmfit.Parameter('amp_b',value=ampb,min=0.)
+            paramsbH.add_many(sl,it,ab,bc,yz,cd1,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,rs,st,tu,uv,vw,wy)
+            #paramsbH.add_many(sl,it,ab,bc,yz,ij,jk,kl,lm,mn,no,op,pq,qr,cd1,de,ef,fg,gh,hi)
+  
+            broadresu = broad_mod.fit(data_cor,paramsbH,x=l)
+            lmfit.model.save_modelresult(broadresu, parentFold+'broadone_modelresult.sav')
+            with open(parentFold+'fitbroad_result.txt', 'w') as fh:
+                fh.write(broadresu.fit_report())
+ 
+            # PLOT AND PRINT THE RESULTS 
+            refer2 = broad_plot(parentFold,l,data_cor,meth,trigger,linresu,oneresu,fin_fit,broadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,std0,std1)
+            broad_fit = broadresu.best_fit
+            # Save the results in the corresponding array
+            prov_VB.append(refer2[0])
+            prov_eVB.append(refer2[1])
+            prov_SB.append(refer2[2])
+            prov_eSB.append(refer2[3])
+
+    ##############################################################
+    ##############################################################
+
+    elif trigger == 'N':
+        params2c = lmfit.Parameters()
+        if meth == 'S':
+            # Now we define the initial guesses and the constraints
+            cd1 = lmfit.Parameter('mu_0', value=tworesu.values["mu_0"],vary=False)
+            de = lmfit.Parameter('sig_0', value=tworesu.values["sig_0"],vary=False)
+            ef = lmfit.Parameter('amp_0', value=tworesu.values["amp_0"],vary=False)
+            fg = lmfit.Parameter('mu_1', value=tworesu.values["mu_1"],vary=False)
+            gh = lmfit.Parameter('sig_1', value=tworesu.values["sig_1"],vary=False)
+            hi = lmfit.Parameter('amp_1', value=tworesu.values["amp_1"],vary=False)
+            ij = lmfit.Parameter('mu_2', value=mu2,expr='mu_0*(6584./6731.)')
+            jk = lmfit.Parameter('sig_2', value=sig2,expr='sig_0')
+            kl = lmfit.Parameter('amp_2', value=amp2,min=0.)
+            lm = lmfit.Parameter('mu_3', value=mu3,expr='mu_0*(6563./6731.)')
+            mn = lmfit.Parameter('sig_3', value=sig3,expr='sig_0')
+            no = lmfit.Parameter('amp_3', value=amp3,min=0.)
+            op = lmfit.Parameter('mu_4', value=mu4,expr='mu_0*(6548./6731.)')
+            pq = lmfit.Parameter('sig_4', value=sig4,expr='sig_0')
+            qr = lmfit.Parameter('amp_4', value=amp4,min=0.,expr='amp_2*(1./3.)')
+            rs = lmfit.Parameter('mu_5', value=mu5,expr='mu_0*(6300.304/6730.82)')
+            st = lmfit.Parameter('sig_5', value=sig5,expr='sig_0')
+            tu = lmfit.Parameter('amp_5', value=amp5,min=0.)
+            uv = lmfit.Parameter('mu_6', value=mu6,expr='mu_0*(6363.77/6730.82)')
+            vw = lmfit.Parameter('sig_6', value=sig6,expr='sig_0')
+            wy = lmfit.Parameter('amp_6', value=amp6,min=0.,expr='amp_5*(1./3.)')
+            aaa = lmfit.Parameter('mu_20', value=tworesu.values["mu_20"],vary=False)
+            aab = lmfit.Parameter('sig_20', value=tworesu.values["sig_20"],vary=False)
+            aac = lmfit.Parameter('amp_20', value=tworesu.values["amp_20"],vary=False)
+            aad = lmfit.Parameter('mu_21', value=tworesu.values["mu_21"],vary=False)
+            aae = lmfit.Parameter('sig_21', value=tworesu.values["sig_21"],vary=False)
+            aaf = lmfit.Parameter('amp_21', value=tworesu.values["amp_21"],vary=False)
+            aag = lmfit.Parameter('mu_22', value=mu2,expr='mu_20*(6584./6731.)')
+            aah = lmfit.Parameter('sig_22', value=sig22,expr='sig_20')
+            aai = lmfit.Parameter('amp_22', value=amp22,min=0.)
+            aaj = lmfit.Parameter('mu_23', value=mu3,expr='mu_20*(6563./6731.)')
+            aak = lmfit.Parameter('sig_23', value=sig23,expr='sig_20')
+            aal = lmfit.Parameter('amp_23', value=amp23,min=0.)
+            aam = lmfit.Parameter('mu_24', value=mu4,expr='mu_20*(6548./6731.)')
+            aan = lmfit.Parameter('sig_24', value=sig24,expr='sig_20')
+            aao = lmfit.Parameter('amp_24', value=amp24,min=0.,expr='amp_22*(1./3.)')
+            aap = lmfit.Parameter('mu_25', value=mu5,expr='mu_20*(6300./6731.)')
+            aaq = lmfit.Parameter('sig_25', value=sig25,expr='sig_20')
+            aar = lmfit.Parameter('amp_25', value=amp25,min=0.)
+            aas = lmfit.Parameter('mu_26', value=mu6,expr='mu_20*(6363./6731.)')
+            aat = lmfit.Parameter('sig_26', value=sig26,expr='sig_20')
+            aau = lmfit.Parameter('amp_26', value=amp26,min=0.,expr='amp_25*(1./3.)')
+            params2c.add_many(sl,it,cd1,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,rs,st,tu,uv,vw,wy,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao,aap,aaq,aar,aas,aat,aau)
+
+        elif meth == 'O':
+            # Now we define the initial guesses and the constraints
+            cd1 = lmfit.Parameter('mu_0', value=mu0,expr='mu_5*(6730.82/6300.30)')
+            de = lmfit.Parameter('sig_0', value=sig0,expr='sig_5')
+            ef = lmfit.Parameter('amp_0', value=amp0,min=0.)
+            fg = lmfit.Parameter('mu_1', value=mu1,expr='mu_5*(6716.44/6300.30)')
+            gh = lmfit.Parameter('sig_1', value=sig1,expr='sig_5')
+            hi = lmfit.Parameter('amp_1', value=amp1,min=0.)
+            ij = lmfit.Parameter('mu_2', value=mu2,expr='mu_5*(6584./6300.30)')
+            jk = lmfit.Parameter('sig_2', value=sig2,expr='sig_5')
+            kl = lmfit.Parameter('amp_2', value=amp2,min=0.)
+            lm = lmfit.Parameter('mu_3', value=mu3,expr='mu_5*(6563./6300.30)')
+            mn = lmfit.Parameter('sig_3', value=sig3,expr='sig_5')
+            no = lmfit.Parameter('amp_3', value=amp3,min=0.)
+            op = lmfit.Parameter('mu_4', value=mu4,expr='mu_5*(6548./6300.30)')
+            pq = lmfit.Parameter('sig_4', value=sig4,expr='sig_5')
+            qr = lmfit.Parameter('amp_4', value=amp4,min=0.,expr='amp_2*(1./3.)')
+            rs = lmfit.Parameter('mu_5', value=tworesu.values["mu_0"],vary=False)
+            st = lmfit.Parameter('sig_5', value=tworesu.values["sig_0"],vary=False)
+            tu = lmfit.Parameter('amp_5', value=tworesu.values["amp_0"],vary=False)
+            uv = lmfit.Parameter('mu_6', value=tworesu.values["mu_1"],vary=False)
+            vw = lmfit.Parameter('sig_6', value=tworesu.values["sig_1"],vary=False)
+            wy = lmfit.Parameter('amp_6', value=tworesu.values["amp_1"],vary=False)
+            aaa = lmfit.Parameter('mu_20', value=mu0,expr='mu_25*(6730.82/6300.30)')
+            aab = lmfit.Parameter('sig_20', value=sig20,expr='sig_25')
+            aac = lmfit.Parameter('amp_20', value=amp20,min=0.)
+            aad = lmfit.Parameter('mu_21', value=mu1,expr='mu_25*(6716.44/6300.30)')
+            aae = lmfit.Parameter('sig_21', value=sig21,expr='sig_25')
+            aaf = lmfit.Parameter('amp_21', value=amp21,min=0.)
+            aag = lmfit.Parameter('mu_22', value=mu2,expr='mu_25*(6584./6300.30)')
+            aah = lmfit.Parameter('sig_22', value=sig22,expr='sig_25')
+            aai = lmfit.Parameter('amp_22', value=amp22,min=0.)
+            aaj = lmfit.Parameter('mu_23', value=mu3,expr='mu_25*(6563./6300.30)')
+            aak = lmfit.Parameter('sig_23', value=sig23,expr='sig_25')
+            aal = lmfit.Parameter('amp_23', value=amp23,min=0.)
+            aam = lmfit.Parameter('mu_24', value=mu4,expr='mu_25*(6548./6300.30)')
+            aan = lmfit.Parameter('sig_24', value=sig24,expr='sig_25')
+            aao = lmfit.Parameter('amp_24', value=amp24,min=0.,expr='amp_22*(1./3.)')
+            aap = lmfit.Parameter('mu_25', value=tworesu.values["mu_20"],vary=False)
+            aaq = lmfit.Parameter('sig_25', value=tworesu.values["sig_20"],vary=False)
+            aar = lmfit.Parameter('amp_25', value=tworesu.values["amp_20"],vary=False)
+            aas = lmfit.Parameter('mu_26', value=tworesu.values["mu_21"],vary=False)
+            aat = lmfit.Parameter('sig_26', value=tworesu.values["sig_21"],vary=False)
+            aau = lmfit.Parameter('amp_26', value=tworesu.values["amp_21"],vary=False)
+            params2c.add_many(sl,it,rs,st,tu,uv,vw,wy,cd1,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aap,aaq,aar,aas,aat,aau,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao)
+
+	# FIT
+        twocompresu = twocomp_mod.fit(data_cor,params2c,x=l)
+	
+        lmfit.model.save_modelresult(twocompresu, parentFold+'two_modelresult.sav')
+        with open(parentFold+'fit_'+str(meth)+'_two_result.txt', 'w') as fh:
+            fh.write(twocompresu.fit_report())
+
+	####################### Calculate gaussians and final fit #######################
+	# Now we create and plot the individual gaussians of the fit
+        tgaus1 = Ofuncts.gaussian(l,twocompresu.values['mu_0'],twocompresu.values['sig_0'],twocompresu.values['amp_0']) 
+        tgaus2 = Ofuncts.gaussian(l,twocompresu.values['mu_1'],twocompresu.values['sig_1'],twocompresu.values['amp_1'])
+        tgaus3 = Ofuncts.gaussian(l,twocompresu.values['mu_2'],twocompresu.values['sig_2'],twocompresu.values['amp_2']) 
+        tgaus4 = Ofuncts.gaussian(l,twocompresu.values['mu_3'],twocompresu.values['sig_3'],twocompresu.values['amp_3'])
+        tgaus5 = Ofuncts.gaussian(l,twocompresu.values['mu_4'],twocompresu.values['sig_4'],twocompresu.values['amp_4'])
+        tgaus6 = Ofuncts.gaussian(l,twocompresu.values['mu_5'],twocompresu.values['sig_5'],twocompresu.values['amp_5'])
+        tgaus7 = Ofuncts.gaussian(l,twocompresu.values['mu_6'],twocompresu.values['sig_6'],twocompresu.values['amp_6'])
+        tgaus8 = Ofuncts.gaussian(l,twocompresu.values['mu_20'],twocompresu.values['sig_20'],twocompresu.values['amp_20']) 
+        tgaus9 = Ofuncts.gaussian(l,twocompresu.values['mu_21'],twocompresu.values['sig_21'],twocompresu.values['amp_21'])
+        tgaus10 = Ofuncts.gaussian(l,twocompresu.values['mu_22'],twocompresu.values['sig_22'],twocompresu.values['amp_22']) 
+        tgaus11 = Ofuncts.gaussian(l,twocompresu.values['mu_23'],twocompresu.values['sig_23'],twocompresu.values['amp_23'])
+        tgaus12 = Ofuncts.gaussian(l,twocompresu.values['mu_24'],twocompresu.values['sig_24'],twocompresu.values['amp_24'])
+        tgaus13 = Ofuncts.gaussian(l,twocompresu.values['mu_25'],twocompresu.values['sig_25'],twocompresu.values['amp_25'])
+        tgaus14 = Ofuncts.gaussian(l,twocompresu.values['mu_26'],twocompresu.values['sig_26'],twocompresu.values['amp_26'])
+        fin2_fit = twocompresu.best_fit
+
+	# two components
+        stdf2_s2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-fin2_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
+        stdf2_s1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]]-fin2_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]])
+        stdf2_n2 = np.std(data_cor[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10]-fin2_fit[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10])
+        stdf2_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-fin2_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
+        stdf2_n1 = np.std(data_cor[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]]-fin2_fit[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]])
+        stdf2_o1 = np.std(data_cor[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]]-fin2_fit[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]])
+        stdf2_o2 = np.std(data_cor[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]]-fin2_fit[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]])
+        print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
+        print('		For SII2: '+str(stdf2_s2/stadev)+' < 3')
+        print('		For SII1: '+str(stdf2_s1/stadev)+' < 3')
+        print('		For NII2: '+str(stdf2_n2/stadev)+' < 3')
+        print('		For Halpha: '+str(stdf2_ha/stadev)+' < 3')
+        print('		For NII1: '+str(stdf2_n1/stadev)+' < 3')
+        print('         For OI1: '+str(stdf2_o1/stadev)+' < 3')
+        print('         For OI2: '+str(stdf2_o2/stadev)+' < 3')
+	
+        if os.path.exists(parentFold+'eps_adj_2C.txt'): os.remove(parentFold+'eps_adj_2C.txt')
+	np.savetxt(parentFold+'eps_adj'+str(meth)+'_2.txt',np.c_[stdf2_s2/stadev,stdf2_s1/stadev,stdf2_n2/stadev,stdf2_ha/stadev,stdf2_n1/stadev,stdf2_o1/stadev,stdf2_o2/stadev,twocompresu.chisqr], ('%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f'),header=('SII2\tSII1\tNII2\tHa\tNII1\tOI1\tOI2\tChi2'))
+
+        try:
+	    # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
+            max2S1 = fin2_fit[np.where(abs(twocompresu.values['mu_0']-l)<0.5)[0][0]] 
+            max2S2 = fin2_fit[np.where(abs(twocompresu.values['mu_1']-l)<0.5)[0][0]] 
+            max2N1 = fin2_fit[np.where(abs(twocompresu.values['mu_2']-l)<0.5)[0][0]] 
+            max2Ha = fin2_fit[np.where(abs(twocompresu.values['mu_3']-l)<0.5)[0][0]] 
+            max2N2 = fin2_fit[np.where(abs(twocompresu.values['mu_4']-l)<0.5)[0][0]] 
+            max2O1 = fin2_fit[np.where(abs(twocompresu.values['mu_5']-l)<0.5)[0][0]]
+            max2O2 = fin2_fit[np.where(abs(twocompresu.values['mu_6']-l)<0.5)[0][0]]
+        except IndexError: 
+            print('ERROR: index out of range. Setting the flux values of the OI 1 line to 0.')
+	
+        # two comps
+	sig2S2 = pix_to_v*np.sqrt(twocompresu.values['sig_3']**2-sig_inst**2)
+	sig20S2 = pix_to_v*np.sqrt(twocompresu.values['sig_23']**2-sig_inst**2)
+	
+        if tworesu.params['sig_0'].stderr == None: 
+             print('Problem determining the errors! First component sigma ')
+             esig2S2 = 0.
+        elif tworesu.params['sig_0'].stderr != None: 
+             esig2S2 = pix_to_v*(2*twocompresu.values['sig_0']*tworesu.params['sig_0'].stderr)/(np.sqrt(twocompresu.values['sig_0']**2-sig_inst**2))
+	     
+        if tworesu.params['sig_20'].stderr == None:
+            print('Problem determining the errors! Second component sigma ')
+            esig20S2 = 0.
+        elif tworesu.params['sig_20'].stderr != None:
+            esig20S2 = pix_to_v*(2*twocompresu.values['sig_20']*tworesu.params['sig_20'].stderr)/(np.sqrt(twocompresu.values['sig_20']**2-sig_inst**2))
+	    
+        v2S2 = v_luz*((twocompresu.values['mu_3']-l_Halpha)/l_Halpha)
+        v20S2 = v_luz*((twocompresu.values['mu_23']-l_Halpha)/l_Halpha)
+        if tworesu.params['mu_0'].stderr == None: 
+            print('Problem determining the errors! First component ')
+            ev2S2= 0.
+        elif tworesu.params['mu_0'].stderr != None:
+            print('Problem determining the errors! Second component ')
+            ev2S2 = ((v_luz/l_SII_2)*tworesu.params['mu_0'].stderr)
+        if tworesu.params['mu_20'].stderr == None: 
+            ev20S2 = 0.
+        elif tworesu.params['mu_20'].stderr != None: 
+            ev20S2 = ((v_luz/l_SII_2)*tworesu.params['mu_20'].stderr)
+	
+        # Save the velocity and sigma for all components
+        if os.path.exists(parentFold+'v_sig_adj_2C.txt'): os.remove(parentFold+'v_sig_adj_2C.txt')
+	np.savetxt(parentFold+'v_sig_adj_2C.txt',np.c_[v2S2,ev2S2,v20S2,ev20S2,sig2S2,esig2S2,sig20S2,esig20S2],('%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f'),header=('v_ref2\tev_ref2\tv_2ref2\tev_2ref2\tsig_ref2\tesig_ref2\tsig_2ref2\tesig_2ref2'))
+        
+        # Save the fluxes for all components
+        if os.path.exists(parentFold+'fluxes_'+str(meth)+'_2_Ncomp.txt'): os.remove(parentFold+'fluxes_2C_Ncomp.txt')
+        np.savetxt(parentFold+'fluxes_2C_Ncomp.txt',np.c_[sum(tgaus1),sum(tgaus2),sum(tgaus3),sum(tgaus4),sum(tgaus5),sum(tgaus6),sum(tgaus7)],fmt=('%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f'),header=('SII_6731\tSII_6716\tNII_6584\tHalpha\tNII_6548\tOI_6300\tOI_6363'))
+        if os.path.exists(parentFold+'fluxes_2C_Scomp.txt'): os.remove(parentFold+'fluxes_2C_Scomp.txt')
+        np.savetxt(parentFold+'fluxes_2C_Scomp.txt',np.c_[sum(tgaus8),sum(tgaus9),sum(tgaus10),sum(tgaus11),sum(tgaus12),sum(tgaus13),sum(tgaus14)],('%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f'),header=('SII_6731\tSII_6716\tNII_6584\tHalpha\tNII_6548\tOI_6300\tOI_6363'))
+
+	########################### PLOT #############################
+        plt.close('all')
+	# MAIN plot
+        fig1   = plt.figure(1,figsize=(10, 9))
+        frame1 = fig1.add_axes((.1,.25,.85,.65)) 	     # xstart, ystart, xend, yend [units are fraction of the image frame, from bottom left corner]
+        plt.plot(l,data_cor,'k',linewidth=2)		     # Initial data
+        plt.plot(l[std0:std1],data_cor[std0:std1],c='y',linewidth=4)  # Zone where the stddev is calculated
+        plt.plot(l[std0:std1],data_cor[std0:std1],'k',linewidth=1)		     # Initial data
+        #plt.plot(l,(linresu.values['slope']*l+linresu.values['intc']),c='y',linestyle=(0, (5, 8)),label='Linear fit')
+        plt.plot(l,tgaus1+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,tgaus2+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,tgaus3+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,tgaus4+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,tgaus5+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,tgaus6+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,tgaus7+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,tgaus8+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,tgaus9+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,tgaus10+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,tgaus11+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,tgaus12+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,tgaus13+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,tgaus14+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,fin2_fit,'r-')
+        textstr = '\n'.join((r'$V_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v2S2,ev2S2),
+			    r'$V_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(v20S2,ev20S2),
+			    r'$\sigma_{SII_{2-1comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig2S2,esig2S2),
+			    r'$\sigma_{SII_{2-2comp}}$ = '+ '{:.2f} +- {:.2f}'.format(sig20S2,esig20S2),
+			    #r'$\frac{F_{SII_{2}}}{F_{SII_{1}}}$ = '+ '{:.3f}'.format(max2S2/max2S1),
+			    r'$F_{H_{\alpha}}$ = '+ '{:.3f}'.format(max2Ha)+' $10^{-14}$'))
+
+        frame1.set_xticklabels([]) 			# Remove x-tic labels for the first frame
+        plt.ylabel(r'Flux (erg $\rm cm^{-2} s^{-1} \AA^{-1}$)',fontsize=19)
+        plt.tick_params(axis='both', labelsize=17)
+        plt.xlim(l[0],l[-1])
+        plt.gca().yaxis.set_major_locator(plt.MaxNLocator(prune='lower'))
+        plt.text(0.84,0.9,'N',color='g',transform=frame1.transAxes,fontsize=21)
+        plt.text(0.87,0.9,'+',color='k',transform=frame1.transAxes,fontsize=21)
+        plt.text(0.9,0.9,'S',color='dodgerblue',transform=frame1.transAxes,fontsize=21)
+
+	# RESIDUAL plot
+        frame2 = fig1.add_axes((.1,.1,.85,.15))
+        plt.plot(l,np.zeros(len(l)),c='orange',linestyle='-')         	# Line around zero
+        plt.plot(l,data_cor-fin2_fit,color='k')		# Main
+        plt.xlabel('Wavelength ($\AA$)',fontsize=19)
+        plt.ylabel('Residuals',fontsize=19)
+        plt.tick_params(axis='both', labelsize=17)
+        plt.xlim(l[0],l[-1])
+        plt.plot(l,np.zeros(len(l))+1.5*stadev,c='orange',linestyle=(0,(5,8)))	# 3 sigma upper limit
+        plt.plot(l,np.zeros(len(l))-1.5*stadev,c='orange',linestyle=(0,(5,8))) 	# 3 sigma down limit
+        plt.ylim(-(3*stadev)*3,(3*stadev)*3)
+
+        plt.savefig(parentFold+'adj_full_2comp.pdf',format='pdf',bbox_inches='tight',pad_inches=0.2)
+        props = dict(boxstyle='round',facecolor='white', alpha=0.5)
+        frame1.text(6250.,max(data_cor),textstr,fontsize=12,verticalalignment='top', bbox=props)
+        plt.savefig(parentFold+'adj_full_2comp.png',bbox_inches='tight',pad_inches=0.2)
+
+        ##############################################################
+        ##############################################################
+        # Now we consider if a third narrow component is necessary:
+        if stdf2_s2/stadev > 3 and stdf2_s1/stadev > 3:
+            trigger3 = 'Y'
+        else:
+            trigger3 = 'N'
+
+        #trigger3 = 'N'
+        # trigger3 = input('Do the fit needs a second narrow component? ("Y"/"N"): ')
+        if trigger3 == 'N':
+            print('No second narrow component is needed')
+            prov_eSN.append(esig2S2),prov_SN.append(sig2S2),prov_VN.append(v2S2),prov_eVN.append(ev2S2),prov_notSN.append(twocompresu.best_values['sig_3']),prov_noteSN.append(twocompresu.params['sig_3'].stderr),prov_notVN.append(twocompresu.params['mu_3']),prov_noteVN.append(twocompresu.params['mu_3'].stderr)
+            prov_eSS.append(esig20S2),prov_SS.append(sig20S2),prov_VS.append(v20S2),prov_eVS.append(ev20S2)
+            prov_VN2.append(np.nan),prov_eVN2.append(np.nan),prov_SN2.append(np.nan),prov_eSN2.append(np.nan),prov_f2Ha.append(np.nan),prov_f2N1.append(np.nan),prov_f2N2.append(np.nan),prov_f2S1.append(np.nan),prov_f2S2.append(np.nan),prov_f2O1.append(np.nan),prov_f2O2.append(np.nan)
+            np.savetxt(parentFold+'fittwo_best_values.txt',np.c_[l,twocompresu.data,twocompresu.best_fit,lin_data_fin,tgaus1,tgaus8,tgaus2,tgaus9,tgaus3,tgaus10,tgaus4,tgaus11,tgaus5,tgaus12,tgaus6,tgaus13,tgaus7,tgaus14],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tSecond_SII1\tNarrow_SII6716\tSecond_SII2\tNarrow_NII6584\tSecond_NII2\tNarrow_Halpha\tSecond_Halpha\tNarrow_NII6548\tSecond_NII1\tNarrow_OI6300\tSecond_OI6300\tNarrow_OI6363\tSecond_OI6363'))
+
+        elif trigger3 == 'Y':
+            print('A second narrow component is needed')
+            Sgaus1,Sgaus2,Sgaus3,Sgaus4,Sgaus5,Sgaus6,Sgaus7,Sgaus11,Sgaus12,Sgaus13,Sgaus14,Sgaus15,Sgaus16,Sgaus17,Sgaus21,Sgaus22,Sgaus23,Sgaus24,Sgaus25,Sgaus26,Sgaus27,v30S2,ev30S2,v31S2,ev31S2,v32S2,ev32S2,sig30S2,esig30S2,sig31S2,esig31S2,sig30S2,esig30S2,T3CResu = FitThirdComp(parentFold,l,data_cor,lin_data_fin,threeresu,meth,mu0,sig0,amp0,mu1,sig1,amp1,mu2,sig2,amp2,mu3,sig3,amp3,mu4,sig4,amp4,mu5,sig5,amp5,mu6,sig6,amp6,sig20,amp20,sig21,amp21,sig22,amp22,sig23,amp23,sig24,amp24,sig25,amp25,sig26,amp26,sl,it,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,stadev)
+            np.savetxt(parentFold+'fitthree_best_values.txt',np.c_[l,twocompresu.data,twocompresu.best_fit,lin_data_fin,Sgaus1,Sgaus11,Sgaus21,Sgaus2,Sgaus12,Sgaus22,Sgaus3,Sgaus13,Sgaus23,Sgaus4,Sgaus14,Sgaus24,Sgaus5,Sgaus15,Sgaus25,Sgaus6,Sgaus16,Sgaus26,Sgaus7,Sgaus17,Sgaus27],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tSecond_SII1\tThird_SII1\tNarrow_SII6716\tSecond_SII2\tThird_SII2\tNarrow_NII6584\tSecond_NII2\tThird_NII2\tNarrow_Halpha\tSecond_Halpha\tThird_Halpha\tNarrow_NII6548\tSecond_NII1\tThird_NII1\tNarrow_OI6300\tSecond_OI6300\tThird_OI6300\tNarrow_OI6363\tSecond_OI6363\tThird_OI6363'))
+            prov_fS2.append(sum(Sgaus1)),prov_fS1.append(sum(Sgaus2)),prov_fN2.append(sum(Sgaus3)),prov_fHa.append(sum(Sgaus4)),prov_fN1.append(sum(Sgaus5)),prov_fO1.append(sum(Sgaus6)),prov_fO2.append(sum(Sgaus7)),prov_fSHa.append(sum(Sgaus14)),prov_fSN1.append(sum(Sgaus15)),prov_fSN2.append(sum(Sgaus13)),prov_fSS1.append(sum(Sgaus12)),prov_fSS2.append(sum(Sgaus11)),prov_fSO1.append(sum(Sgaus16)),prov_fSO2.append(sum(Sgaus17)),prov_f2S2.append(sum(Sgaus21)),prov_f2S1.append(sum(Sgaus22)),prov_f2N2.append(sum(Sgaus23)),prov_f2Ha.append(sum(Sgaus24)),prov_f2N1.append(sum(Sgaus25)),prov_f2O1.append(sum(Sgaus26)),prov_f2O2.append(sum(Sgaus27))
+            prov_VN2.append(v32S2),prov_eVN2.append(ev32S2),prov_SN2.append(sig32S2),prov_eSN2.append(esig32S2),prov_VN.append(v30S2),prov_eVN.append(ev30S2),prov_SN.append(sig30S2),prov_eSN.append(esig30S2),prov_VS.append(v31S2),prov_eVS.append(ev31S2),prov_SS.append(sig31S2),prov_eSS.append(esig31S2),prov_notSN.append(T3CResu.params['sig_3']),prov_noteSN.append(T3CResu.params['sig_3'].stderr),prov_notVN.append(T3CResu.params['mu_3']),prov_noteVN.append(T3CResu.params['mu_3'].stderr)
+
+	##############################################################
+        if stdf2_n2 > 3 or stdf2_ha > 3 or stdf2_n1 > 3: 
+            trigger2 = 'Y'
+        else: 
+            trigger2 = 'N'
+        if galaxy >= 15 and galaxy <= 20 and galaxy2 >= 12 and galaxy2 <= 16: trigger2 = 'Y' #33  30
+        #trigger2 = 'N'
+	#trigger2 = input('Do the fit needs a broad Halpha component? ("Y"/"N"): ')
+        #prov_eSN.append(esig2S2),prov_SN.append(sig2S2),prov_VN.append(v2S2),prov_eVN.append(ev2S2),prov_eSS.append(esig20S2),prov_SS.append(sig20S2),prov_VS.append(v20S2),prov_eVS.append(ev20S2),prov_notSN.append(twocompresu.best_values['sig_3']),prov_noteSN.append(twocompresu.params['sig_3'].stderr),prov_notVN.append(twocompresu.params['mu_3']),prov_noteVN.append(twocompresu.params['mu_3'].stderr)
+
+        if trigger2 == 'N': 
+            print('The final plots are already printed and have been already saved!')
+            prov_eSB.append(np.nan)
+            prov_SB.append(np.nan)
+            prov_VB.append(np.nan)
+            prov_eVB.append(np.nan)
+            if trigger3 == 'N':
+                np.savetxt(parentFold+'fittwo_best_values.txt',np.c_[l,twocompresu.data,twocompresu.best_fit,lin_data_fin,tgaus1,tgaus8,tgaus2,tgaus9,tgaus3,tgaus10,tgaus4,tgaus11,tgaus5,tgaus12,tgaus6,tgaus13,tgaus7,tgaus14],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tSecond_SII1\tNarrow_SII6716\tSecond_SII2\tNarrow_NII6584\tSecond_NII2\tNarrow_Halpha\tSecond_Halpha\tNarrow_NII6548\tSecond_NII1\tNarrow_OI6300\tSecond_OI6300\tNarrow_OI6363\tSecond_OI6363'))
+                # Saving the max flux of each line to do the final flux map
+                prov_fS2.append(sum(tgaus1)),prov_fS1.append(sum(tgaus2)),prov_fN2.append(sum(tgaus3)),prov_fHa.append(sum(tgaus4)),prov_fN1.append(sum(tgaus5)),prov_fO1.append(sum(tgaus6)),prov_fO2.append(sum(tgaus7)),prov_fSHa.append(sum(tgaus11)),prov_fSN1.append(sum(tgaus12)),prov_fSN2.append(sum(tgaus10)),prov_fSS1.append(sum(tgaus9)),prov_fSS2.append(sum(tgaus8)),prov_fSO1.append(sum(tgaus13)),prov_fSO2.append(sum(tgaus14))
+
+
+        elif trigger2 == 'Y':
+            # Now we define the initial guesses and the constraints
+            newxb = l[np.where(l>l9)[0][0]:np.where(l<l6)[0][-1]]
+            newyb = data_cor[np.where(l>l9)[0][0]:np.where(l<l6)[0][-1]]
+            sigb = 16.
+            mub  = mu3
+            ampb = amp3/3.
+            paramsbH = lmfit.Parameters()
+	        # broad components
+            ab = lmfit.Parameter('mu_b',value=mub)#6605.,vary=False)
+            bc = lmfit.Parameter('sig_b',value=sigb,min=12.)#twocompresu.values['sig_23'])#29.51,vary=False) minbroad
+            yz = lmfit.Parameter('amp_b',value=ampb,min=0.)
+            #aramsbH.add_many(sl,it,ab,bc,yz,cd1,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao)
+            paramsbH.add_many(sl,it,ab,bc,yz,cd1,de,ef,fg,gh,hi,ij,jk,kl,lm,mn,no,op,pq,qr,rs,st,tu,uv,vw,wy,aaa,aab,aac,aad,aae,aaf,aag,aah,aai,aaj,aak,aal,aam,aan,aao,aap,aaq,aar,aas,aat,aau)
+
+            twobroadresu = twobroadcomp_mod.fit(data_cor,paramsbH,x=l)
+            lmfit.model.save_modelresult(twobroadresu, parentFold+'broadtwo_modelresult.sav')
+            with open(parentFold+'fit_twobroad_result.txt', 'w') as fh:
+                fh.write(twobroadresu.fit_report())
+
+	    # PLOT AND PRINT THE RESULTS 
+            refer2 = broad_plot(parentFold,l,data_cor,meth,trigger,linresu,tworesu,fin2_fit,twobroadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,std0,std1)
+            twobroad_fit = twobroadresu.best_fit
+            # Save the results in the corresponding array
+            prov_VB.append(refer2[0])
+            prov_eVB.append(refer2[1])
+            prov_SB.append(refer2[2])
+            prov_eSB.append(refer2[3])
+
+    else: 
+        print('Please use "Y" or "N"')
+
+  vel_narrow.append(prov_VN),evel_narrow.append(prov_eVN),vel_second.append(prov_VS),evel_second.append(prov_eVS),vel_broad.append(prov_VB),evel_broad.append(prov_eVB),sig_narrow.append(prov_SN),esig_narrow.append(prov_eSN),sig_second.append(prov_SS),esig_second.append(prov_eSS),sig_broad.append(prov_SB),esig_broad.append(prov_eSB),vel_narrow_NoCor.append(prov_notVN),evel_narrow_NoCor.append(prov_noteVN),sig_narrow_NoCor.append(prov_notSN),esig_narrow_NoCor.append(prov_noteSN),flux_Ha.append(prov_fHa),flux_SII1.append(prov_fS1),flux_SII2.append(prov_fS2),flux_NII1.append(prov_fN1),flux_NII2.append(prov_fN2),flux_OI1.append(prov_fO1),flux_OI2.append(prov_fO2),flux_second_Ha.append(prov_fSHa),flux_second_SII1.append(prov_fSS1),flux_second_SII2.append(prov_fSN2),flux_second_NII1.append(prov_fSN1),flux_second_NII2.append(prov_fSN2),flux_second_OI1.append(prov_fSO1),flux_second_OI2.append(prov_fSO2),epsilon1.append(prov_e1),epsilon2.append(prov_e2),epsilon3.append(prov_e3),AIC1.append(prov_a1),AIC2.append(prov_a2),AIC3.append(prov_a3),BIC1.append(prov_b1),BIC2.append(prov_b2),BIC3.append(prov_b3)
+
+# Now we save a txt for each of the components (v and sigma)
+# It would be ordered as: each line [i,:], each column [:,i]
+# Watch out which are the real positions of each vector in order 
+# to create the final maps!!!
+np.savetxt(path+'epsilon1c.txt',np.matrix(epsilon1),fmt='%.6f')
+np.savetxt(path+'AIC1c.txt',np.matrix(AIC1),fmt='%.6f')
+np.savetxt(path+'BIC1c.txt',np.matrix(BIC1),fmt='%.6f')
+np.savetxt(path+'epsilon2c.txt',np.matrix(epsilon2),fmt='%.6f')
+np.savetxt(path+'AIC2c.txt',np.matrix(AIC2),fmt='%.6f')
+np.savetxt(path+'BIC2c.txt',np.matrix(BIC2),fmt='%.6f')
+np.savetxt(path+'epsilon3c.txt',np.matrix(epsilon3),fmt='%.6f')
+np.savetxt(path+'AIC3c.txt',np.matrix(AIC3),fmt='%.6f')
+np.savetxt(path+'BIC3c.txt',np.matrix(BIC3),fmt='%.6f')
+
+np.savetxt(path+'velnarrow.txt',np.matrix(vel_narrow),fmt='%.4f')
+np.savetxt(path+'evelnarrow.txt',np.matrix(evel_narrow),fmt='%.4f')
+#np.savetxt(path+'velnarrow_notCor.txt',np.matrix(vel_narrow_NoCor),fmt='%.8f')
+np.savetxt(path+'signarrow.txt',np.matrix(sig_narrow),fmt='%.4f')
+np.savetxt(path+'esignarrow.txt',np.matrix(esig_narrow),fmt='%.4f')
+#np.savetxt(path+'signarrow_notCor.txt',np.matrix(sig_narrow_NoCor),fmt='%.8f')
+
+np.savetxt(path+'velsecond.txt',np.matrix(vel_second),fmt='%.4f')
+np.savetxt(path+'evelsecond.txt',np.matrix(evel_second),fmt='%.4f')
+np.savetxt(path+'sigsecond.txt',np.matrix(sig_second),fmt='%.4f')
+np.savetxt(path+'esigsecond.txt',np.matrix(esig_second),fmt='%.4f')
+np.savetxt(path+'velbroad.txt',np.matrix(vel_broad),fmt='%.4f')
+np.savetxt(path+'evelbroad.txt',np.matrix(evel_broad),fmt='%.4f')
+np.savetxt(path+'sigbroad.txt',np.matrix(sig_broad),fmt='%.4f')
+np.savetxt(path+'esigbroad.txt',np.matrix(esig_broad),fmt='%.4f')
+np.savetxt(path+'flux_Halpha.txt',np.matrix(flux_Ha),fmt='%.8f')
+np.savetxt(path+'flux_NII6584.txt',np.matrix(flux_NII2),fmt='%.8f')
+np.savetxt(path+'flux_NII6548.txt',np.matrix(flux_NII1),fmt='%.8f')
+np.savetxt(path+'flux_SII6730.txt',np.matrix(flux_SII2),fmt='%.8f')
+np.savetxt(path+'flux_SII6716.txt',np.matrix(flux_SII1),fmt='%.8f')
+np.savetxt(path+'flux_OI6300.txt',np.matrix(flux_OI1),fmt='%.8f')
+np.savetxt(path+'flux_OI6363.txt',np.matrix(flux_OI2),fmt='%.8f')
+np.savetxt(path+'flux_second_Halpha.txt',np.matrix(flux_second_Ha),fmt='%.8f')
+np.savetxt(path+'flux_second_NII6584.txt',np.matrix(flux_second_NII2),fmt='%.8f')
+np.savetxt(path+'flux_second_NII6548.txt',np.matrix(flux_second_NII1),fmt='%.8f')
+np.savetxt(path+'flux_second_SII6730.txt',np.matrix(flux_second_SII2),fmt='%.8f')
+np.savetxt(path+'flux_second_SII6716.txt',np.matrix(flux_second_SII1),fmt='%.8f')
+np.savetxt(path+'flux_second_OI6300.txt',np.matrix(flux_second_OI1),fmt='%.8f')
+np.savetxt(path+'flux_second_OI6363.txt',np.matrix(flux_second_OI2),fmt='%.8f')
+
+# Plot the maps
+plt.figure(figsize=(18,8))
+
+ax = plt.subplot(131)
+masked_array = np.ma.array(vel_narrow,mask=np.isnan(vel_narrow))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax.invert_yaxis()
+plt.title('V (km/s)')
+
+ax1 = plt.subplot(132)
+masked_array = np.ma.array(sig_narrow,mask=np.isnan(sig_narrow))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax1)
+cax1 = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax1)
+ax1.invert_yaxis()
+plt.title('$\sigma$ (km/s)')
+
+ax2 = plt.subplot(133)
+masked_array = np.ma.array(flux_Ha,mask=np.isnan(flux_Ha))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax2)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax2.invert_yaxis()
+plt.title(r'Flux$_{H\alpha}$')
+
+plt.savefig(path+'maps_'+str(cubo)+'.png',bbox_inches='tight',pad_inches=0.2)
+
+#######################################################################
+# Plot the flux maps 
+#######################################################################
+plt.figure(figsize=(18,8))
+ax = plt.subplot(231)
+masked_array = np.ma.array(flux_Ha,mask=np.isnan(flux_Ha))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax.invert_yaxis()
+pt.title(r'Flux$_{H\alpha}$')
+
+ax1 = plt.subplot(232)
+masked_array = np.ma.array(flux_NII2,mask=np.isnan(flux_NII2))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax1)
+cax1 = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax1)
+ax1.invert_yaxis()
+plt.title(r'Flux$_{[NII]6584}$')
+
+ax2 = plt.subplot(233)
+masked_array = np.ma.array(flux_NII1,mask=np.isnan(flux_NII1))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax2)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax2.invert_yaxis()
+plt.title(r'Flux$_{[NII]6548}$')
+
+ax3 = plt.subplot(234)
+masked_array = np.ma.array(flux_SII2,mask=np.isnan(flux_SII2))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax3)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax3.invert_yaxis()
+plt.title(r'Flux$_{[SII]6731}$')
+
+ax4 = plt.subplot(235)
+masked_array = np.ma.array(flux_SII1,mask=np.isnan(flux_SII1))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax4)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax4.invert_yaxis()
+plt.title(r'Flux$_{[SII]6716}$')
+
+ax6 = plt.subplot(236)
+flux_NII_Ha = np.log10(np.array(flux_NII2)/np.array(flux_Ha))
+masked_array = np.ma.array(flux_NII_Ha,mask=np.isnan(flux_NII_Ha))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax6)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax6.invert_yaxis()
+plt.title(r'log($[NII]/H_{\alpha}$)')
+
+plt.savefig(path+'maps_flux_allLines_'+str(cubo)+'.png',bbox_inches='tight',pad_inches=0.2)
+plt.savefig(path+'maps_flux_allLines_'+str(cubo)+'.pdf',bbox_inches='tight',pad_inches=0.2)
+
+##########################################
+# Secondary component
+plt.figure(figsize=(18,8))
+
+ax = plt.subplot(131)
+masked_array = np.ma.array(vel_second,mask=np.isnan(vel_second))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax.ticklabel_format(fontsize='large')
+ax.invert_yaxis()
+plt.title('V (km/s)')
+
+ax1 = plt.subplot(132)
+masked_array = np.ma.array(sig_second,mask=np.isnan(sig_second))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax1)
+cax1 = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax1)
+ax1.ticklabel_format(fontsize='large')
+ax1.invert_yaxis()
+plt.title('$\sigma$ (km/s)')
+
+ax2 = plt.subplot(133)
+masked_array = np.ma.array(flux_second_Ha,mask=np.isnan(flux_second_Ha))
+im = plt.imshow(masked_array,cmap='jet')
+divider = make_axes_locatable(ax2)
+cax = divider.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(cax=cax)
+ax2.invert_yaxis()
+plt.title(r'Flux$_{H\alpha}$')
+
+plt.savefig(path+'maps_notCor_second_'+str(cubo)+'.png',bbox_inches='tight',pad_inches=0.2)
