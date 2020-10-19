@@ -4,20 +4,24 @@ It is needed a parentFold, the spectrum in which the fit is going to be made and
 '''
 
 from config import * 
+import config
 
 from plot_broad import broad_plot
 from DefRegionLines import DefRegionLines
 from plot_refer_lines import refer_plot
 from FitThirdComp import FitThirdComp
 from FirstFittingFunction import FirstFittingFunction
-
-def FitPoint(x,y):
+ 
+def FitPoint(listxy):
+    path = config.path
+    meth = config.meth
+    x,y,nana=listxy
     galaxy2 = y
     galaxy  = x
     fitoutput = FitOutput(x,y)
     print('')
     print('Starting the fit for spec_'+str(galaxy)+'_'+str(galaxy2))
-    print('Done {:.2f} %'.format(100*((galaxy+1)+(galaxy2*33))/990.))
+    #print('Done {:.2f} %'.format(100*((galaxy+1)+(galaxy2*33))/990.))
     print('')
     # Define the path to save the data
     l = np.copy(l_init)#*10000)-red_lambda_cor_SII2
@@ -26,7 +30,6 @@ def FitPoint(x,y):
     end_point = np.where(l<6850)[0][-1]
     l = l[beg_point:end_point]
     data_cor = data[beg_point:end_point]
-    
     ########################## Transform data and plot the spectra ##########################
     # Plot the spectra and check that everything is ok
     plt.close('all')
@@ -50,8 +53,8 @@ def FitPoint(x,y):
     if np.any(data_cor) == 0:
         print('For the spectra in '+str(galaxy)+'_'+str(galaxy2)+' all the datapoints where nan')
         print('Continue...')
-        fitoutput.prov_VN = (np.nan),fitoutput.prov_VN2 = (np.nan),fitoutput.prov_VS = (np.nan),fitoutput.prov_VB = (np.nan),fitoutput.prov_eVN = (np.nan),fitoutput.prov_eVN2 = (np.nan),fitoutput.prov_eVS = (np.nan),fitoutput.prov_eVB = (np.nan),fitoutput.prov_SN = (np.nan),fitoutput.prov_SN2 = (np.nan),fitoutput.prov_SS = (np.nan),fitoutput.prov_SB = (np.nan),fitoutput.prov_eSN = (np.nan),fitoutput.prov_eSN2 = (np.nan),fitoutput.prov_eSS = (np.nan),fitoutput.prov_eSB = (np.nan),fitoutput.prov_notSN = (np.nan),fitoutput.prov_noteSN = (np.nan),fitoutput.prov_notVN = (np.nan),fitoutput.prov_noteVN = (np.nan),fitoutput.prov_fHa = (np.nan),fitoutput.prov_fN1 = (np.nan),fitoutput.prov_fN2 = (np.nan),fitoutput.prov_fS1 = (np.nan),fitoutput.prov_fS2 = (np.nan),fitoutput.prov_fO1 = (np.nan),fitoutput.prov_fO2 = (np.nan),fitoutput.prov_f2Ha = (np.nan),fitoutput.prov_f2N1 = (np.nan),fitoutput.prov_f2N2 = (np.nan),fitoutput.prov_f2S1 = (np.nan),fitoutput.prov_f2S2 = (np.nan),fitoutput.prov_f2O1 = (np.nan),fitoutput.prov_f2O2 = (np.nan),fitoutput.prov_fSHa = (np.nan),fitoutput.prov_fSN1 = (np.nan),fitoutput.prov_fSN2 = (np.nan),fitoutput.prov_fSS1 = (np.nan),fitoutput.prov_fSS2 = (np.nan),fitoutput.prov_fSO1 = (np.nan),fitoutput.prov_fSO2 = (np.nan),fitoutput.prov_e1 = (np.nan),fitoutput.prov_e2 = (np.nan),fitoutput.prov_e3 = (np.nan),fitoutput.prov_a1 = (np.nan),fitoutput.prov_a2 = (np.nan),fitoutput.prov_a3 = (np.nan),fitoutput.prov_b1 = (np.nan),fitoutput.prov_b2 = (np.nan),fitoutput.prov_b3 = (np.nan)
-        continue
+        fitoutput.prov_VN = (np.nan);fitoutput.prov_VN2 = (np.nan);fitoutput.prov_VS = (np.nan);fitoutput.prov_VB = (np.nan);fitoutput.prov_eVN = (np.nan);fitoutput.prov_eVN2 = (np.nan);fitoutput.prov_eVS = (np.nan);fitoutput.prov_eVB = (np.nan);fitoutput.prov_SN = (np.nan);fitoutput.prov_SN2 = (np.nan);fitoutput.prov_SS = (np.nan);fitoutput.prov_SB = (np.nan);fitoutput.prov_eSN = (np.nan);fitoutput.prov_eSN2 = (np.nan);fitoutput.prov_eSS = (np.nan);fitoutput.prov_eSB = (np.nan);fitoutput.prov_notSN = (np.nan);fitoutput.prov_noteSN = (np.nan);fitoutput.prov_notVN = (np.nan);fitoutput.prov_noteVN = (np.nan);fitoutput.prov_fHa = (np.nan);fitoutput.prov_fN1 = (np.nan);fitoutput.prov_fN2 = (np.nan);fitoutput.prov_fS1 = (np.nan);fitoutput.prov_fS2 = (np.nan);fitoutput.prov_fO1 = (np.nan);fitoutput.prov_fO2 = (np.nan);fitoutput.prov_f2Ha = (np.nan);fitoutput.prov_f2N1 = (np.nan);fitoutput.prov_f2N2 = (np.nan);fitoutput.prov_f2S1 = (np.nan);fitoutput.prov_f2S2 = (np.nan);fitoutput.prov_f2O1 = (np.nan);fitoutput.prov_f2O2 = (np.nan);fitoutput.prov_fSHa = (np.nan);fitoutput.prov_fSN1 = (np.nan);fitoutput.prov_fSN2 = (np.nan);fitoutput.prov_fSS1 = (np.nan);fitoutput.prov_fSS2 = (np.nan);fitoutput.prov_fSO1 = (np.nan);fitoutput.prov_fSO2 = (np.nan);fitoutput.prov_e1 = (np.nan);fitoutput.prov_e2 = (np.nan);fitoutput.prov_e3 = (np.nan);fitoutput.prov_a1 = (np.nan);fitoutput.prov_a2 = (np.nan);fitoutput.prov_a3 = (np.nan);fitoutput.prov_b1 = (np.nan);fitoutput.prov_b2 = (np.nan);fitoutput.prov_b3 = (np.nan)
+        return  
 
     parentFold = GetParentFold(path,galaxy,galaxy2)
 
@@ -79,21 +82,21 @@ def FitPoint(x,y):
 
     # Fit the SII lines
     if meth == 'S':
-        std0,std1,stadev,linresu,lin_data_fin,sl,it,meth,oneresu,tworesu,threeresu,trigger,comp_mod,broad_mod,twocomp_mod,twobroadcomp_mod,threecomp_mod,threebroadcomp_mod,ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2 = FirstFittingFunction(galaxy,galaxy2,l,data_cor,mu0,sig0,amp0,sig20,amp20,sig30,amp30,mu1,sig1,amp1,sig21,amp21,sig31,amp31,l2,l3,l5,l6,l9,l10)
+        std0,std1,stadev,linresu,lin_data_fin,sl,it,meth,oneresu,tworesu,threeresu,trigger,comp_mod,broad_mod,twocomp_mod,twobroadcomp_mod,threecomp_mod,threebroadcomp_mod,ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2 = FirstFittingFunction(galaxy,galaxy2,l,data_cor,mu0,sig0,amp0,sig20,amp20,sig30,amp30,mu1,sig1,amp1,sig21,amp21,sig31,amp31,l2,l3,l5,l6,l9,l10,l11,l12,l13,l14)
     elif meth == 'O':
-        std0,std1,stadev,linresu,lin_data_fin,sl,it,meth,oneresu,tworesu,threeresu,trigger,comp_mod,broad_mod,twocomp_mod,twobroadcomp_mod,threecomp_mod,threebroadcomp_mod,ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2 = FirstFittingFunction(galaxy,galaxy2,l,data_cor,mu5,sig5,amp5,sig25,amp25,sig35,amp35,mu6,sig6,amp6,sig26,amp26,sig36,amp36,l2,l3,l5,l6,l9,l10)
-    fitoutput.prov_e1 = (ep_1),fitoutput.prov_e2 = (ep2_1),fitoutput.prov_e3 = (ep3_1)
-    fitoutput.prov_a1 = (oneresu.aic),fitoutput.prov_a2 = (tworesu.aic),fitoutput.prov_a3 = (threeresu.aic)
-    fitoutput.prov_b1 = (oneresu.bic),fitoutput.prov_b2 = (tworesu.bic),fitoutput.prov_b3 = (threeresu.bic)
+        std0,std1,stadev,linresu,lin_data_fin,sl,it,meth,oneresu,tworesu,threeresu,trigger,comp_mod,broad_mod,twocomp_mod,twobroadcomp_mod,threecomp_mod,threebroadcomp_mod,ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2 = FirstFittingFunction(galaxy,galaxy2,l,data_cor,mu5,sig5,amp5,sig25,amp25,sig35,amp35,mu6,sig6,amp6,sig26,amp26,sig36,amp36,l2,l3,l5,l6,l9,l10,l11,l12,l13,l14)
+    fitoutput.prov_e1 = (ep_1);fitoutput.prov_e2 = (ep2_1);fitoutput.prov_e3 = (ep3_1)
+    fitoutput.prov_a1 = (oneresu.aic);fitoutput.prov_a2 = (tworesu.aic);fitoutput.prov_a3 = (threeresu.aic)
+    fitoutput.prov_b1 = (oneresu.bic);fitoutput.prov_b2 = (tworesu.bic);fitoutput.prov_b3 = (threeresu.bic)
     
     if trigger == 'Y':
         # There is no secondary or third component
         # thus one can add a 0 value directly here to the second comp list
-        fitoutput.prov_SS = (np.nan),fitoutput.prov_SN2 = (np.nan)
-        fitoutput.prov_VS = (np.nan),fitoutput.prov_VN2 = (np.nan)
-        fitoutput.prov_eSS = (np.nan),fitoutput.prov_eSN2 = (np.nan)
-        fitoutput.prov_eVS = (np.nan),fitoutput.prov_eVN2 = (np.nan)
-        fitoutput.prov_fSHa = (np.nan),fitoutput.prov_fSN1 = (np.nan),fitoutput.prov_fSN2 = (np.nan),fitoutput.prov_fSS1 = (np.nan),fitoutput.prov_fSS2 = (np.nan),fitoutput.prov_fSO1 = (np.nan),fitoutput.prov_fSO2 = (np.nan),fitoutput.prov_f2Ha = (np.nan),fitoutput.prov_f2N1 = (np.nan),fitoutput.prov_f2N2 = (np.nan),fitoutput.prov_f2S1 = (np.nan),fitoutput.prov_f2S2 = (np.nan),fitoutput.prov_f2O1 = (np.nan),fitoutput.prov_f2O2 = (np.nan)
+        fitoutput.prov_SS = (np.nan);fitoutput.prov_SN2 = (np.nan)
+        fitoutput.prov_VS = (np.nan);fitoutput.prov_VN2 = (np.nan)
+        fitoutput.prov_eSS = (np.nan);fitoutput.prov_eSN2 = (np.nan)
+        fitoutput.prov_eVS = (np.nan);fitoutput.prov_eVN2 = (np.nan)
+        fitoutput.prov_fSHa = (np.nan);fitoutput.prov_fSN1 = (np.nan);fitoutput.prov_fSN2 = (np.nan);fitoutput.prov_fSS1 = (np.nan);fitoutput.prov_fSS2 = (np.nan);fitoutput.prov_fSO1 = (np.nan);fitoutput.prov_fSO2 = (np.nan);fitoutput.prov_f2Ha = (np.nan);fitoutput.prov_f2N1 = (np.nan);fitoutput.prov_f2N2 = (np.nan);fitoutput.prov_f2S1 = (np.nan);fitoutput.prov_f2S2 = (np.nan);fitoutput.prov_f2O1 = (np.nan);fitoutput.prov_f2O2 = (np.nan)
 
         params = lmfit.Parameters() # initialise the parameters
         # Now we define the initial guesses and the constraints
@@ -211,8 +214,8 @@ def FitPoint(x,y):
         if os.path.exists(parentFold+'fluxes_1C.txt'): os.remove(parentFold+'fluxes_1C.txt')
         np.savetxt(parentFold+'fluxes_1C.txt',np.c_[sum(gaus1),sum(gaus2),sum(gaus3),sum(gaus4),sum(gaus5),sum(gaus6),sum(gaus7)],('%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f'),header=('SII_6731\tSII_6716\tNII_6584\tHalpha\tNII_6548\tOI_6300\tOI_6363'))
 
-        # Saving the max flux of each line to do the final flux map
-        fitoutput.prov_fS2 = (sum(gaus1)),fitoutput.prov_fS1 = (sum(gaus2)),fitoutput.prov_fN2 = (sum(gaus3)),fitoutput.prov_fHa = (sum(gaus4)),fitoutput.prov_fN1 = (sum(gaus5)),fitoutput.prov_fO1 = (sum(gaus6)),fitoutput.prov_fO2 = (sum(gaus7))
+        # Saving the max flux of each line to do the final flux ma;
+        fitoutput.prov_fS2 = (sum(gaus1));fitoutput.prov_fS1 = (sum(gaus2));fitoutput.prov_fN2 = (sum(gaus3));fitoutput.prov_fHa = (sum(gaus4));fitoutput.prov_fN1 = (sum(gaus5));fitoutput.prov_fO1 = (sum(gaus6));fitoutput.prov_fO2 = (sum(gaus7))
 
         ############################ PLOT ############################
         plt.close('all')
@@ -261,7 +264,7 @@ def FitPoint(x,y):
         frame1.text(6250,max(data_cor), textstr, fontsize=12,verticalalignment='top', bbox=props)
         plt.savefig(parentFold+'adj_full_1comp.png',bbox_inches='tight',pad_inches=0.2)
 
-        fitoutput.prov_VN = (vS2),fitoutput.prov_eVN = (evS2),fitoutput.prov_SN = (sigS2),fitoutput.prov_eSN = (esigS2)
+        fitoutput.prov_VN = (vS2);fitoutput.prov_eVN = (evS2);fitoutput.prov_SN = (sigS2);fitoutput.prov_eSN = (esigS2)
 
         ##############################################################
 	##############################################################
@@ -276,7 +279,7 @@ def FitPoint(x,y):
             print('The final plots are already printed and have been already saved!')
             print('No broad component from the BLR added to the fit of this spaxel')
             # Append all the values to the corresponding vector
-            fitoutput.prov_SB = (np.nan),fitoutput.prov_eSB = (np.nan),fitoutput.prov_VB = (np.nan),fitoutput.prov_eVB = (np.nan)
+            fitoutput.prov_SB = (np.nan);fitoutput.prov_eSB = (np.nan);fitoutput.prov_VB = (np.nan);fitoutput.prov_eVB = (np.nan)
             np.savetxt(parentFold+'fit1comp_best_values.txt',np.c_[l,resu1.data,resu1.best_fit,lin_data_fin,gaus1,gaus2,gaus3,gaus4,gaus5,gaus6,gaus7],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tNarrow_SII6716\tNarrow_NII6584\tNarrow_Halpha\tNarrow_NII6548\tNarrow_OI6300\tNarrow_OI6363'))
         elif trigger2 == 'Y':
             # Now we define the initial guesses and the constraints
@@ -569,17 +572,17 @@ def FitPoint(x,y):
         # trigger3 = input('Do the fit needs a second narrow component? ("Y"/"N"): ')
         if trigger3 == 'N':
             print('No second narrow component is needed')
-            fitoutput.prov_eSN = (esig2S2),fitoutput.prov_SN = (sig2S2),fitoutput.prov_VN = (v2S2),fitoutput.prov_eVN = (ev2S2),fitoutput.prov_notSN = (twocompresu.best_values['sig_3']),fitoutput.prov_noteSN = (twocompresu.params['sig_3'].stderr),fitoutput.prov_notVN = (twocompresu.params['mu_3']),fitoutput.prov_noteVN = (twocompresu.params['mu_3'].stderr)
-            fitoutput.prov_eSS = (esig20S2),fitoutput.prov_SS = (sig20S2),fitoutput.prov_VS = (v20S2),fitoutput.prov_eVS = (ev20S2)
-            fitoutput.prov_VN2 = (np.nan),fitoutput.prov_eVN2 = (np.nan),fitoutput.prov_SN2 = (np.nan),fitoutput.prov_eSN2 = (np.nan),fitoutput.prov_f2Ha = (np.nan),fitoutput.prov_f2N1 = (np.nan),fitoutput.prov_f2N2 = (np.nan),fitoutput.prov_f2S1 = (np.nan),fitoutput.prov_f2S2 = (np.nan),fitoutput.prov_f2O1 = (np.nan),fitoutput.prov_f2O2 = (np.nan)
+            fitoutput.prov_eSN = (esig2S2);fitoutput.prov_SN = (sig2S2);fitoutput.prov_VN = (v2S2);fitoutput.prov_eVN = (ev2S2);fitoutput.prov_notSN = (twocompresu.best_values['sig_3']);fitoutput.prov_noteSN = (twocompresu.params['sig_3'].stderr);fitoutput.prov_notVN = (twocompresu.params['mu_3']);fitoutput.prov_noteVN = (twocompresu.params['mu_3'].stderr)
+            fitoutput.prov_eSS = (esig20S2);fitoutput.prov_SS = (sig20S2);fitoutput.prov_VS = (v20S2);fitoutput.prov_eVS = (ev20S2)
+            fitoutput.prov_VN2 = (np.nan);fitoutput.prov_eVN2 = (np.nan);fitoutput.prov_SN2 = (np.nan);fitoutput.prov_eSN2 = (np.nan);fitoutput.prov_f2Ha = (np.nan);fitoutput.prov_f2N1 = (np.nan);fitoutput.prov_f2N2 = (np.nan);fitoutput.prov_f2S1 = (np.nan);fitoutput.prov_f2S2 = (np.nan);fitoutput.prov_f2O1 = (np.nan);fitoutput.prov_f2O2 = (np.nan)
             np.savetxt(parentFold+'fittwo_best_values.txt',np.c_[l,twocompresu.data,twocompresu.best_fit,lin_data_fin,tgaus1,tgaus8,tgaus2,tgaus9,tgaus3,tgaus10,tgaus4,tgaus11,tgaus5,tgaus12,tgaus6,tgaus13,tgaus7,tgaus14],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tSecond_SII1\tNarrow_SII6716\tSecond_SII2\tNarrow_NII6584\tSecond_NII2\tNarrow_Halpha\tSecond_Halpha\tNarrow_NII6548\tSecond_NII1\tNarrow_OI6300\tSecond_OI6300\tNarrow_OI6363\tSecond_OI6363'))
 
         elif trigger3 == 'Y':
             print('A second narrow component is needed')
             Sgaus1,Sgaus2,Sgaus3,Sgaus4,Sgaus5,Sgaus6,Sgaus7,Sgaus11,Sgaus12,Sgaus13,Sgaus14,Sgaus15,Sgaus16,Sgaus17,Sgaus21,Sgaus22,Sgaus23,Sgaus24,Sgaus25,Sgaus26,Sgaus27,v30S2,ev30S2,v31S2,ev31S2,v32S2,ev32S2,sig30S2,esig30S2,sig31S2,esig31S2,sig30S2,esig30S2,T3CResu = FitThirdComp(parentFold,l,data_cor,lin_data_fin,threeresu,meth,mu0,sig0,amp0,mu1,sig1,amp1,mu2,sig2,amp2,mu3,sig3,amp3,mu4,sig4,amp4,mu5,sig5,amp5,mu6,sig6,amp6,sig20,amp20,sig21,amp21,sig22,amp22,sig23,amp23,sig24,amp24,sig25,amp25,sig26,amp26,sl,it,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,stadev)
             np.savetxt(parentFold+'fitthree_best_values.txt',np.c_[l,twocompresu.data,twocompresu.best_fit,lin_data_fin,Sgaus1,Sgaus11,Sgaus21,Sgaus2,Sgaus12,Sgaus22,Sgaus3,Sgaus13,Sgaus23,Sgaus4,Sgaus14,Sgaus24,Sgaus5,Sgaus15,Sgaus25,Sgaus6,Sgaus16,Sgaus26,Sgaus7,Sgaus17,Sgaus27],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tSecond_SII1\tThird_SII1\tNarrow_SII6716\tSecond_SII2\tThird_SII2\tNarrow_NII6584\tSecond_NII2\tThird_NII2\tNarrow_Halpha\tSecond_Halpha\tThird_Halpha\tNarrow_NII6548\tSecond_NII1\tThird_NII1\tNarrow_OI6300\tSecond_OI6300\tThird_OI6300\tNarrow_OI6363\tSecond_OI6363\tThird_OI6363'))
-            fitoutput.prov_fS2 = (sum(Sgaus1)),fitoutput.prov_fS1 = (sum(Sgaus2)),fitoutput.prov_fN2 = (sum(Sgaus3)),fitoutput.prov_fHa = (sum(Sgaus4)),fitoutput.prov_fN1 = (sum(Sgaus5)),fitoutput.prov_fO1 = (sum(Sgaus6)),fitoutput.prov_fO2 = (sum(Sgaus7)),fitoutput.prov_fSHa = (sum(Sgaus14)),fitoutput.prov_fSN1 = (sum(Sgaus15)),fitoutput.prov_fSN2 = (sum(Sgaus13)),fitoutput.prov_fSS1 = (sum(Sgaus12)),fitoutput.prov_fSS2 = (sum(Sgaus11)),fitoutput.prov_fSO1 = (sum(Sgaus16)),fitoutput.prov_fSO2 = (sum(Sgaus17)),fitoutput.prov_f2S2 = (sum(Sgaus21)),fitoutput.prov_f2S1 = (sum(Sgaus22)),fitoutput.prov_f2N2 = (sum(Sgaus23)),fitoutput.prov_f2Ha = (sum(Sgaus24)),fitoutput.prov_f2N1 = (sum(Sgaus25)),fitoutput.prov_f2O1 = (sum(Sgaus26)),fitoutput.prov_f2O2 = (sum(Sgaus27))
-            fitoutput.prov_VN2 = (v32S2),fitoutput.prov_eVN2 = (ev32S2),fitoutput.prov_SN2 = (sig32S2),fitoutput.prov_eSN2 = (esig32S2),fitoutput.prov_VN = (v30S2),fitoutput.prov_eVN = (ev30S2),fitoutput.prov_SN = (sig30S2),fitoutput.prov_eSN = (esig30S2),fitoutput.prov_VS = (v31S2),fitoutput.prov_eVS = (ev31S2),fitoutput.prov_SS = (sig31S2),fitoutput.prov_eSS = (esig31S2),fitoutput.prov_notSN = (T3CResu.params['sig_3']),fitoutput.prov_noteSN = (T3CResu.params['sig_3'].stderr),fitoutput.prov_notVN = (T3CResu.params['mu_3']),fitoutput.prov_noteVN = (T3CResu.params['mu_3'].stderr)
+            fitoutput.prov_fS2 = sum(Sgaus1);fitoutput.prov_fS1 = sum(Sgaus2);fitoutput.prov_fN2 = (sum(Sgaus3));fitoutput.prov_fHa = (sum(Sgaus4));fitoutput.prov_fN1 = (sum(Sgaus5));fitoutput.prov_fO1 = (sum(Sgaus6));fitoutput.prov_fO2 = (sum(Sgaus7));fitoutput.prov_fSHa = (sum(Sgaus14));fitoutput.prov_fSN1 = (sum(Sgaus15));fitoutput.prov_fSN2 = (sum(Sgaus13));fitoutput.prov_fSS1 = (sum(Sgaus12));fitoutput.prov_fSS2 = (sum(Sgaus11));fitoutput.prov_fSO1 = (sum(Sgaus16));fitoutput.prov_fSO2 = (sum(Sgaus17));fitoutput.prov_f2S2 = (sum(Sgaus21));fitoutput.prov_f2S1 = (sum(Sgaus22));fitoutput.prov_f2N2 = (sum(Sgaus23));fitoutput.prov_f2Ha = (sum(Sgaus24));fitoutput.prov_f2N1 = (sum(Sgaus25));fitoutput.prov_f2O1 = (sum(Sgaus26));fitoutput.prov_f2O2 = (sum(Sgaus27))
+            fitoutput.prov_VN2 = (v32S2);fitoutput.prov_eVN2 = (ev32S2);fitoutput.prov_SN2 = (sig32S2);fitoutput.prov_eSN2 = (esig32S2);fitoutput.prov_VN = (v30S2);fitoutput.prov_eVN = (ev30S2);fitoutput.prov_SN = (sig30S2);fitoutput.prov_eSN = (esig30S2);fitoutput.prov_VS = (v31S2);fitoutput.prov_eVS = (ev31S2);fitoutput.prov_SS = (sig31S2);fitoutput.prov_eSS = (esig31S2);fitoutput.prov_notSN = (T3CResu.params['sig_3']);fitoutput.prov_noteSN = (T3CResu.params['sig_3'].stderr);fitoutput.prov_notVN = (T3CResu.params['mu_3']);fitoutput.prov_noteVN = (T3CResu.params['mu_3'].stderr)
 
 	##############################################################
         if stdf2_n2 > 3 or stdf2_ha > 3 or stdf2_n1 > 3: 
@@ -600,7 +603,7 @@ def FitPoint(x,y):
             if trigger3 == 'N':
                 np.savetxt(parentFold+'fittwo_best_values.txt',np.c_[l,twocompresu.data,twocompresu.best_fit,lin_data_fin,tgaus1,tgaus8,tgaus2,tgaus9,tgaus3,tgaus10,tgaus4,tgaus11,tgaus5,tgaus12,tgaus6,tgaus13,tgaus7,tgaus14],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tSecond_SII1\tNarrow_SII6716\tSecond_SII2\tNarrow_NII6584\tSecond_NII2\tNarrow_Halpha\tSecond_Halpha\tNarrow_NII6548\tSecond_NII1\tNarrow_OI6300\tSecond_OI6300\tNarrow_OI6363\tSecond_OI6363'))
                 # Saving the max flux of each line to do the final flux map
-                fitoutput.prov_fS2 = (sum(tgaus1)),fitoutput.prov_fS1 = (sum(tgaus2)),fitoutput.prov_fN2 = (sum(tgaus3)),fitoutput.prov_fHa = (sum(tgaus4)),fitoutput.prov_fN1 = (sum(tgaus5)),fitoutput.prov_fO1 = (sum(tgaus6)),fitoutput.prov_fO2 = (sum(tgaus7)),fitoutput.prov_fSHa = (sum(tgaus11)),fitoutput.prov_fSN1 = (sum(tgaus12)),fitoutput.prov_fSN2 = (sum(tgaus10)),fitoutput.prov_fSS1 = (sum(tgaus9)),fitoutput.prov_fSS2 = (sum(tgaus8)),fitoutput.prov_fSO1 = (sum(tgaus13)),fitoutput.prov_fSO2 = (sum(tgaus14))
+                fitoutput.prov_fS2 = (sum(tgaus1));fitoutput.prov_fS1 = (sum(tgaus2));fitoutput.prov_fN2 = (sum(tgaus3));fitoutput.prov_fHa = (sum(tgaus4));fitoutput.prov_fN1 = (sum(tgaus5));fitoutput.prov_fO1 = (sum(tgaus6));fitoutput.prov_fO2 = (sum(tgaus7));fitoutput.prov_fSHa = (sum(tgaus11));fitoutput.prov_fSN1 = (sum(tgaus12));fitoutput.prov_fSN2 = (sum(tgaus10));fitoutput.prov_fSS1 = (sum(tgaus9));fitoutput.prov_fSS2 = (sum(tgaus8));fitoutput.prov_fSO1 = (sum(tgaus13));fitoutput.prov_fSO2 = (sum(tgaus14))
 
 
         elif trigger2 == 'Y':
@@ -638,4 +641,5 @@ def FitPoint(x,y):
     
     #### Save
     outname = 'fit_%i_%i.p'%(x,y)
-    pickle.dump(fitoutput, parentFold+outname)
+    fout = open(parentFold+outname,'w')
+    pickle.dump(fitoutput, fout)
