@@ -1,11 +1,16 @@
 from config import *
+import sys
 
 checkAll = True
+n = 0
 for y in np.arange(0,30,1):
   for x in np.arange(0,33,1):
-    if not CheckFit(x,y): print('Missing fit [x, y] = [%i, %i]'%(x,y))
+    if not CheckFit(x,y): 
+        print('Missing fit [x, y] = [%i, %i]'%(x,y))
+        checkAll = False
+        n += 1
 
-if not checkAll: exit()
+if not checkAll and n > 8: sys.exit()
 
 
 sig_narrow,sig_narrow2,sig_second,sig_broad = [],[],[],[]
@@ -31,8 +36,12 @@ for y in np.arange(0,30,1):
   for x in np.arange(0,33,1):
     name = 'fit_%i_%i.p'%(x,y)
     parentFold = GetParentFold(path, x, y)
-    output = pickle.load(parentFold+name)
-    prov_SN.append(output.prov_SN),prov_eSN.append(output.prov_eSN),prov_SN2.append(output.prov_SN2),prov_eSN2.append(output.prov_eSN2),prov_SS.append(output.prov_SS),prov_eSS.append(output.prov_eSS),prov_SB.append(output.prov_SB),prov_eSB.append(output.prov_eSB),prov_notSN.append(output.prov_notSN),prov_noteSN.append(output.prov_noteSN),prov_notVN.append(output.prov_notVN),prov_noteVN.append(output.prov_noteVN),prov_VS.append(output.prov_VS),prov_eVS.append(output.prov_eVS),prov_VN.append(output.prov_VN),prov_eVN.append(output.prov_eVN),prov_VN2.append(output.prov_VN2),prov_eVN2.append(output.prov_eVN2),prov_VB.append(output.prov_VB),prov_eVB.append(output.prov_eVB),prov_fHa.append(output.prov_fHa),prov_fN1.append(output.prov_fN1),prov_fN2.append(output.prov_fN2),prov_fS1.append(output.prov_fS1),prov_fS2.append(output.prov_fS2),prov_f2Ha.append(output.prov_f2Ha),prov_f2N1.append(output.prov_f2N1),prov_f2N2.append(output.prov_f2N2),prov_f2S1.append(output.prov_f2S1),prov_f2S2.append(output.prov_f2S2),prov_fSHa.append(output.prov_fSHa),prov_fSN1.append(output.prov_fSN1),prov_fSN2.append(output.prov_fSN2),prov_fSS1.append(output.prov_fSS1),prov_fSS2.append(output.prov_fSS2),prov_fO1.append(output.prov_fO1),prov_fO2.append(output.prov_fO2),prov_f2O1.append(output.prov_f2O1),prov_f2O2.append(output.prov_f2O2),prov_fSO1.append(output.prov_fSO1),prov_fSO2.append(output.prov_fSO2),prov_e1.append(output.prov_e1),prov_e2.append(output.prov_e2),prov_e3.append(output.prov_e3),prov_a1.append(output.prov_a1),prov_a2.append(output.prov_a2),prov_a3.append(output.prov_a3),prov_b1.append(output.prov_b1),prov_b2.append(output.prov_b2),prov_b3.append(output.prov_b3)
+    try: 
+        output = pickle.load(open(parentFold+name,'rb'))
+        prov_SN.append(output.prov_SN),prov_eSN.append(output.prov_eSN),prov_SN2.append(output.prov_SN2),prov_eSN2.append(output.prov_eSN2),prov_SS.append(output.prov_SS),prov_eSS.append(output.prov_eSS),prov_SB.append(output.prov_SB),prov_eSB.append(output.prov_eSB),prov_notSN.append(output.prov_notSN),prov_noteSN.append(output.prov_noteSN),prov_notVN.append(output.prov_notVN),prov_noteVN.append(output.prov_noteVN),prov_VS.append(output.prov_VS),prov_eVS.append(output.prov_eVS),prov_VN.append(output.prov_VN),prov_eVN.append(output.prov_eVN),prov_VN2.append(output.prov_VN2),prov_eVN2.append(output.prov_eVN2),prov_VB.append(output.prov_VB),prov_eVB.append(output.prov_eVB),prov_fHa.append(output.prov_fHa),prov_fN1.append(output.prov_fN1),prov_fN2.append(output.prov_fN2),prov_fS1.append(output.prov_fS1),prov_fS2.append(output.prov_fS2),prov_f2Ha.append(output.prov_f2Ha),prov_f2N1.append(output.prov_f2N1),prov_f2N2.append(output.prov_f2N2),prov_f2S1.append(output.prov_f2S1),prov_f2S2.append(output.prov_f2S2),prov_fSHa.append(output.prov_fSHa),prov_fSN1.append(output.prov_fSN1),prov_fSN2.append(output.prov_fSN2),prov_fSS1.append(output.prov_fSS1),prov_fSS2.append(output.prov_fSS2),prov_fO1.append(output.prov_fO1),prov_fO2.append(output.prov_fO2),prov_f2O1.append(output.prov_f2O1),prov_f2O2.append(output.prov_f2O2),prov_fSO1.append(output.prov_fSO1),prov_fSO2.append(output.prov_fSO2),prov_e1.append(output.prov_e1),prov_e2.append(output.prov_e2),prov_e3.append(output.prov_e3),prov_a1.append(output.prov_a1),prov_a2.append(output.prov_a2),prov_a3.append(output.prov_a3),prov_b1.append(output.prov_b1),prov_b2.append(output.prov_b2),prov_b3.append(output.prov_b3)
+    except IOError:
+        prov_SN.append(np.nan),prov_eSN.append(np.nan),prov_SN2.append(np.nan),prov_eSN2.append(np.nan),prov_SS.append(np.nan),prov_eSS.append(np.nan),prov_SB.append(np.nan),prov_eSB.append(np.nan),prov_notSN.append(np.nan),prov_noteSN.append(np.nan),prov_notVN.append(np.nan),prov_noteVN.append(np.nan),prov_VS.append(np.nan),prov_eVS.append(np.nan),prov_VN.append(np.nan),prov_eVN.append(np.nan),prov_VN2.append(np.nan),prov_eVN2.append(np.nan),prov_VB.append(np.nan),prov_eVB.append(np.nan),prov_fHa.append(np.nan),prov_fN1.append(np.nan),prov_fN2.append(np.nan),prov_fS1.append(np.nan),prov_fS2.append(np.nan),prov_f2Ha.append(np.nan),prov_f2N1.append(np.nan),prov_f2N2.append(np.nan),prov_f2S1.append(np.nan),prov_f2S2.append(np.nan),prov_fSHa.append(np.nan),prov_fSN1.append(np.nan),prov_fSN2.append(np.nan),prov_fSS1.append(np.nan),prov_fSS2.append(np.nan),prov_fO1.append(np.nan),prov_fO2.append(np.nan),prov_f2O1.append(np.nan),prov_f2O2.append(np.nan),prov_fSO1.append(np.nan),prov_fSO2.append(np.nan),prov_e1.append(np.nan),prov_e2.append(np.nan),prov_e3.append(np.nan),prov_a1.append(np.nan),prov_a2.append(np.nan),prov_a3.append(np.nan),prov_b1.append(np.nan),prov_b2.append(np.nan),prov_b3.append(np.nan)
+        
 
   vel_narrow.append(prov_VN),evel_narrow.append(prov_eVN),vel_second.append(prov_VS),evel_second.append(prov_eVS),vel_broad.append(prov_VB),evel_broad.append(prov_eVB),sig_narrow.append(prov_SN),esig_narrow.append(prov_eSN),sig_second.append(prov_SS),esig_second.append(prov_eSS),sig_broad.append(prov_SB),esig_broad.append(prov_eSB),vel_narrow_NoCor.append(prov_notVN),evel_narrow_NoCor.append(prov_noteVN),sig_narrow_NoCor.append(prov_notSN),esig_narrow_NoCor.append(prov_noteSN),flux_Ha.append(prov_fHa),flux_SII1.append(prov_fS1),flux_SII2.append(prov_fS2),flux_NII1.append(prov_fN1),flux_NII2.append(prov_fN2),flux_OI1.append(prov_fO1),flux_OI2.append(prov_fO2),flux_second_Ha.append(prov_fSHa),flux_second_SII1.append(prov_fSS1),flux_second_SII2.append(prov_fSN2),flux_second_NII1.append(prov_fSN1),flux_second_NII2.append(prov_fSN2),flux_second_OI1.append(prov_fSO1),flux_second_OI2.append(prov_fSO2),epsilon1.append(prov_e1),epsilon2.append(prov_e2),epsilon3.append(prov_e3),AIC1.append(prov_a1),AIC2.append(prov_a2),AIC3.append(prov_a3),BIC1.append(prov_b1),BIC2.append(prov_b2),BIC3.append(prov_b3)
 
@@ -123,7 +132,7 @@ divider = make_axes_locatable(ax)
 cax = divider.append_axes("right", size="5%", pad=0.05)
 plt.colorbar(cax=cax)
 ax.invert_yaxis()
-pt.title(r'Flux$_{H\alpha}$')
+plt.title(r'Flux$_{H\alpha}$')
 
 ax1 = plt.subplot(232)
 masked_array = np.ma.array(flux_NII2,mask=np.isnan(flux_NII2))
