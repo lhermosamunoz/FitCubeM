@@ -80,10 +80,10 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
 					 threeresu.values['mu_31'],threeresu.values['sig_31'],threeresu.values['amp_31'])
 	if meth == 'S':
     	# one component
-	    ixSTD1 = l[np.where(l > oneresu.values['mu_0'])[0][0]] - 3*oneresu.values['sig_0']
-	    ixSTD2 = l[np.where(l > oneresu.values['mu_0'])[0][0]] + 3*oneresu.values['sig_0']
-	    ixSTD1_2 = l[np.where(l > oneresu.values['mu_1'])[0][0]] - 3*oneresu.values['sig_1']
-	    ixSTD2_2 = l[np.where(l > oneresu.values['mu_1'])[0][0]] + 3*oneresu.values['sig_1']
+	    ixSTD1 = l[np.where(l > oneresu.values['mu_0'])[0][0]] - 1.5*oneresu.values['sig_0']
+	    ixSTD2 = l[np.where(l > oneresu.values['mu_0'])[0][0]] + 1.5*oneresu.values['sig_0']
+	    ixSTD1_2 = l[np.where(l > oneresu.values['mu_1'])[0][0]] - 1.5*oneresu.values['sig_1']
+	    ixSTD2_2 = l[np.where(l > oneresu.values['mu_1'])[0][0]] + 1.5*oneresu.values['sig_1']
 	    #std_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-onefin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
 	    #std_1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]]-onefin_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]])
 	    std_2 = np.std(data_cor[np.where(l<ixSTD1)[0][-1]:np.where(l>ixSTD2)[0][0]]-onefin_fit[np.where(l<ixSTD1)[0][-1]:np.where(l>ixSTD2)[0][0]])
@@ -94,10 +94,10 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
 	    print('	For the SII2 line: '+str(ep_2)+' < 3')
 	    print('	For the SII1 line: '+str(ep_1)+' < 3')
 	    # two components
-	    ixSTD1 = l[np.where(l > tworesu.values['mu_0'])[0][0]] - 3*tworesu.values['sig_0']
-	    ixSTD2 = l[np.where(l > tworesu.values['mu_0'])[0][0]] + 3*tworesu.values['sig_0']
-	    ixSTD1_2 = l[np.where(l > tworesu.values['mu_1'])[0][0]] - 3*tworesu.values['sig_1']
-	    ixSTD2_2 = l[np.where(l > tworesu.values['mu_1'])[0][0]] + 3*tworesu.values['sig_1']
+	    ixSTD1 = l[np.where(l > tworesu.values['mu_0'])[0][0]] - 1.5*tworesu.values['sig_0']
+	    ixSTD2 = l[np.where(l > tworesu.values['mu_0'])[0][0]] + 1.5*tworesu.values['sig_0']
+	    ixSTD1_2 = l[np.where(l > tworesu.values['mu_1'])[0][0]] - 1.5*tworesu.values['sig_1']
+	    ixSTD2_2 = l[np.where(l > tworesu.values['mu_1'])[0][0]] + 1.5*tworesu.values['sig_1']
 	    std2_2 = np.std(data_cor[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]]-twofin_fit[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]])
 	    std2_1 = np.std(data_cor[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]]-twofin_fit[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]])
 	    #std2_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-twofin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
@@ -109,10 +109,10 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
 	    print('	For the SII1 line: '+str(ep2_1)+' < 3')
 
             # three components
-	    ixSTD1 = l[np.where(l > threeresu.values['mu_0'])[0][0]] - 3*threeresu.values['sig_0']
-	    ixSTD2 = l[np.where(l > threeresu.values['mu_0'])[0][0]] + 3*threeresu.values['sig_0']
-	    ixSTD1_2 = l[np.where(l > threeresu.values['mu_1'])[0][0]] - 3*threeresu.values['sig_1']
-	    ixSTD2_2 = l[np.where(l > threeresu.values['mu_1'])[0][0]] + 3*threeresu.values['sig_1']
+	    ixSTD1 = l[np.where(l > threeresu.values['mu_0'])[0][0]] - 1.5*threeresu.values['sig_0']
+	    ixSTD2 = l[np.where(l > threeresu.values['mu_0'])[0][0]] + 1.5*threeresu.values['sig_0']
+	    ixSTD1_2 = l[np.where(l > threeresu.values['mu_1'])[0][0]] - 1.5*threeresu.values['sig_1']
+	    ixSTD2_2 = l[np.where(l > threeresu.values['mu_1'])[0][0]] + 1.5*threeresu.values['sig_1']
 	    std3_2 = np.std(data_cor[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]]-threefin_fit[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]])
 	    std3_1 = np.std(data_cor[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]]-threefin_fit[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]])
             #std3_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-threefin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
