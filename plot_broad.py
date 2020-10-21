@@ -4,7 +4,7 @@ import scipy.stats as stats
 import Ofuncts
 import os
 
-def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,std0,std1):
+def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,std0,std1):
     '''
 	It gives the plots for one and two components + a broad component in the whole spectra
 
@@ -22,6 +22,8 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
 	std0/std1:     Where the standard deviation of the continuum is calculated
     '''
     # Rest values of the line wavelengths 
+    l_OI_1  = 6300.30
+    l_OI_2  = 6363.30
     l_Halpha = 6562.801
     l_NII_1  = 6548.05
     l_NII_2  = 6583.45
@@ -48,13 +50,15 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         bgaus3 = Ofuncts.gaussian(l,broadresu.values['mu_2'],broadresu.values['sig_2'],broadresu.values['amp_2']) 
         bgaus4 = Ofuncts.gaussian(l,broadresu.values['mu_3'],broadresu.values['sig_3'],broadresu.values['amp_3'])
         bgaus5 = Ofuncts.gaussian(l,broadresu.values['mu_4'],broadresu.values['sig_4'],broadresu.values['amp_4'])
+        bgaus6 = Ofuncts.gaussian(l,broadresu.values['mu_5'],broadresu.values['sig_5'],broadresu.values['amp_5'])
+        bgaus7 = Ofuncts.gaussian(l,broadresu.values['mu_6'],broadresu.values['sig_6'],broadresu.values['amp_6'])
         bgaus8 = Ofuncts.gaussian(l,broadresu.values['mu_b'],broadresu.values['sig_b'],broadresu.values['amp_b'])
         broad_fit = broadresu.best_fit
 
         # We have to calculate the contribution of each component to the global fit
         # Lets define the linear fit data to add to each individual gaussian
         bgaus_total = broad_fit - lin_data_fin
-        np.savetxt(parentFold+'fitbroad_best_values.txt',np.c_[broadresu.data,broadresu.best_fit,lin_data_fin,bgaus1,bgaus2,bgaus3,bgaus4,bgaus5,bgaus8],fmt=('%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Real_data\tBest_fit\tLineal_fit\tNarrow_SII6741\tNarrow_SII6716\tNarrow_NII6584\tNarrow_Halpha\tNarrow_NII6548\tBroad_Halpha'))
+        np.savetxt(parentFold+'fitbroad_best_values.txt',np.c_[broadresu.data,broadresu.best_fit,lin_data_fin,bgaus1,bgaus2,bgaus3,bgaus4,bgaus5,bgaus6,bgaus7,bgaus8],fmt=('%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Real_data\tBest_fit\tLineal_fit\tNarrow_SII6741\tNarrow_SII6716\tNarrow_NII6584\tNarrow_Halpha\tNarrow_NII6548\tNarrow_OI6300\tNarrow_OI6363\tBroad_Halpha'))
         # Now lets determine the contribution of the individual components as follows:
         contr_HaN = sum(bgaus4)
         contr_HaB = sum(bgaus8)
@@ -78,15 +82,19 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         stdb_n2 = np.std(data_cor[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10]-broad_fit[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10])
         stdb_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-broad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
         stdb_n1 = np.std(data_cor[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]]-broad_fit[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]])
+        stdb_o1 = np.std(data_cor[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]]-broad_fit[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]])
+        stdb_o2 = np.std(data_cor[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]]-broad_fit[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]])
         print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component + Ha is... ')
         print('		For SII2: '+str(stdb_s2/stadev)+' < 3')
         print('		For SII1: '+str(stdb_s1/stadev)+' < 3')
         print('		For NII2: '+str(stdb_n2/stadev)+' < 3')
         print('		For Halp: '+str(stdb_ha/stadev)+' < 3')
         print('		For NII1: '+str(stdb_n1/stadev)+' < 3')
+        print('		For OI1 : '+str(stdb_o1/stadev)+' < 3')
+        print('		For OI2 : '+str(stdb_o2/stadev)+' < 3')
     	    
         if os.path.exists(parentFold+'eps_adj'+str(meth)+'_1Cb.txt'): os.remove(parentFold+'eps_adj'+str(meth)+'_1Cb.txt')
-        np.savetxt(parentFold+'eps_adj_1Cb.txt',np.c_[stdb_s2/stadev,stdb_s1/stadev,stdb_n2/stadev,stdb_ha/stadev,stdb_n1/stadev,broadresu.chisqr],('%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f'),header=('SII2\tSII1\tNII2\tHa\tNII1\tChi2'))
+        np.savetxt(parentFold+'eps_adj_1Cb.txt',np.c_[stdb_s2/stadev,stdb_s1/stadev,stdb_n2/stadev,stdb_ha/stadev,stdb_n1/stadev,stdb_o1/stadev,stdb_o2/stadev,broadresu.chisqr],('%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f'),header=('SII2\tSII1\tNII2\tHa\tNII1\tOI1\tOI2\tChi2'))
 
    	    # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
         try:
@@ -95,6 +103,8 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
             maxbN1 = broad_fit[np.where(abs(broadresu.values['mu_2']-l)<0.5)[0][0]] #max(broad_fit[np.where(l>l9)[0][0]:np.where(l<l10)[0][-1]])
             maxbHa = broad_fit[np.where(abs(broadresu.values['mu_3']-l)<0.5)[0][0]] #max(broad_fit[np.where(l>l7)[0][0]:np.where(l<l8)[0][-1]])
             maxbN2 = broad_fit[np.where(abs(broadresu.values['mu_4']-l)<0.5)[0][0]] #max(broad_fit[np.where(l>l5)[0][0]:np.where(l<l6)[0][-1]])
+            maxbO1 = broad_fit[np.where(abs(broadresu.values['mu_5']-l)<0.5)[0][0]] #max(broad_fit[np.where(l>l5)[0][0]:np.where(l<l6)[0][-1]])
+            maxbO2 = broad_fit[np.where(abs(broadresu.values['mu_6']-l)<0.5)[0][0]] #max(broad_fit[np.where(l>l5)[0][0]:np.where(l<l6)[0][-1]])
         except IndexError:
             print('ERROR: index out of range. Setting the flux values of the OI 1 line to 0.')
 
@@ -156,6 +166,8 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         plt.plot(l,bgaus3+lin_data_fin,c='g',linestyle='-')
         plt.plot(l,bgaus4+lin_data_fin,c='g',linestyle='-')
         plt.plot(l,bgaus5+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,bgaus6+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,bgaus7+lin_data_fin,c='g',linestyle='-')
         plt.plot(l,bgaus8+lin_data_fin,c='darkviolet',linestyle='-')#,label='Broad component')
         plt.plot(l,broad_fit,'r-')
 
@@ -185,7 +197,10 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         frame1.text(2.2,max(data_cor)+0.05, textstr, fontsize=12,verticalalignment='top', bbox=props)
         plt.savefig(parentFold+'adj_met'+str(meth)+'_full_1comp_broadH.png',bbox_inches='tight',pad_inches=0.2)
         
-###################################################################################################################################################################################################
+        return [vbS2,evbS2,sigbS2,esigbS2,bgaus1,bgaus2,bgaus3,bgaus4,bgaus5,bgaus6,bgaus7,bgaus8]
+        
+############################################################################################################################################
+############################################################################################################################################
 
     elif trigger=='N':
         ############# Calculate gaussians and final fit #################
@@ -195,18 +210,22 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         b2gaus3 = Ofuncts.gaussian(l,broadresu.values['mu_2'],broadresu.values['sig_2'],broadresu.values['amp_2']) 
         b2gaus4 = Ofuncts.gaussian(l,broadresu.values['mu_3'],broadresu.values['sig_3'],broadresu.values['amp_3'])
         b2gaus5 = Ofuncts.gaussian(l,broadresu.values['mu_4'],broadresu.values['sig_4'],broadresu.values['amp_4'])
+        b2gaus6 = Ofuncts.gaussian(l,broadresu.values['mu_5'],broadresu.values['sig_5'],broadresu.values['amp_5'])
+        b2gaus7 = Ofuncts.gaussian(l,broadresu.values['mu_6'],broadresu.values['sig_6'],broadresu.values['amp_6'])
         b2gaus8 = Ofuncts.gaussian(l,broadresu.values['mu_20'],broadresu.values['sig_20'],broadresu.values['amp_20']) 
         b2gaus9 = Ofuncts.gaussian(l,broadresu.values['mu_21'],broadresu.values['sig_21'],broadresu.values['amp_21'])
         b2gaus10 = Ofuncts.gaussian(l,broadresu.values['mu_22'],broadresu.values['sig_22'],broadresu.values['amp_22']) 
         b2gaus11 = Ofuncts.gaussian(l,broadresu.values['mu_23'],broadresu.values['sig_23'],broadresu.values['amp_23'])
         b2gaus12 = Ofuncts.gaussian(l,broadresu.values['mu_24'],broadresu.values['sig_24'],broadresu.values['amp_24'])
+        b2gaus13 = Ofuncts.gaussian(l,broadresu.values['mu_25'],broadresu.values['sig_25'],broadresu.values['amp_25'])
+        b2gaus14 = Ofuncts.gaussian(l,broadresu.values['mu_26'],broadresu.values['sig_26'],broadresu.values['amp_26'])
         b2gausb = Ofuncts.gaussian(l,broadresu.values['mu_b'],broadresu.values['sig_b'],broadresu.values['amp_b'])
         twobroad_fit = broadresu.best_fit
 
         # We have to calculate the contribution of each component to the global fit
         # Lets define the linear fit data to add to each individual gaussian
         b2gaus_total = twobroad_fit - lin_data_fin
-        np.savetxt(parentFold+'fitbroadtwo_best_values.txt',np.c_[broadresu.data,broadresu.best_fit,lin_data_fin,b2gaus1,b2gaus2,b2gaus3,b2gaus4,b2gaus5,b2gaus8,b2gaus9,b2gaus10,b2gaus11,b2gaus12,b2gausb],fmt=('%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Real_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tNarrow_SII6716\tNarrow_NII6584\tNarrow_Halpha\tNarrow_NII6548\tSecond_SII1\tSecond_SII2\tSecond_NII2\tSecond_Halpha\tSecond_NII1\tBroad_Halpha'))
+        np.savetxt(parentFold+'fitbroadtwo_best_values.txt',np.c_[broadresu.data,broadresu.best_fit,lin_data_fin,b2gaus1,b2gaus2,b2gaus3,b2gaus4,b2gaus5,b2gaus6,b2gaus7,b2gaus8,b2gaus9,b2gaus10,b2gaus11,b2gaus12,b2gaus13,b2gaus14,b2gausb],fmt=('%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Real_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tNarrow_SII6716\tNarrow_NII6584\tNarrow_Halpha\tNarrow_NII6548\tNarrow_OI6300\tNarrow_OI6363\tSecond_SII1\tSecond_SII2\tSecond_NII2\tSecond_Halpha\tSecond_NII1\tSecond_OI1\tSecond_OI2\tBroad_Halpha'))
         # Now lets determine the contribution of the individual components as follows:
         contr_HaN = sum(b2gaus4)
         contr_HaB = sum(b2gausb)
@@ -236,6 +255,8 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         stdb2_n2 = np.std(data_cor[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10]-twobroad_fit[np.where(l<l5)[0][-1]:np.where(l>l6)[0][0]+10])
         stdb2_ha = np.std(data_cor[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]]-twobroad_fit[np.where(l<l7)[0][-1]:np.where(l>l8)[0][0]])
         stdb2_n1 = np.std(data_cor[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]]-twobroad_fit[np.where(l<l9)[0][-1]-10:np.where(l>l10)[0][0]])
+        stdb2_o1 = np.std(data_cor[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]]-twobroad_fit[np.where(l<l11)[0][-1]-10:np.where(l>l12)[0][0]])
+        stdb2_o2 = np.std(data_cor[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]]-twobroad_fit[np.where(l<l13)[0][-1]-10:np.where(l>l14)[0][0]])
 
         print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component + Ha is... ')
         print('		For SII2: '+str(stdb2_s2/stadev)+' < 3')
@@ -243,9 +264,11 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         print('		For NII2: '+str(stdb2_n2/stadev)+' < 3')
         print('		For Halp: '+str(stdb2_ha/stadev)+' < 3')
         print('		For NII1: '+str(stdb2_n1/stadev)+' < 3')
+        print('		For OI1 : '+str(stdb2_o1/stadev)+' < 3')
+        print('		For OI2 : '+str(stdb2_o2/stadev)+' < 3')
 	    
         if os.path.exists(parentFold+'eps_adj_2Cb.txt'): os.remove(parentFold+'eps_adj_2Cb.txt')
-        np.savetxt(parentFold+'eps_adj_2Cb.txt',np.c_[stdb2_s2/stadev,stdb2_s1/stadev,stdb2_n2/stadev,stdb2_ha/stadev,stdb2_n1/stadev,broadresu.chisqr],('%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f'),header=('SII2\tSII1\tNII2\tHa\tNII1\tChi2'))
+        np.savetxt(parentFold+'eps_adj_2Cb.txt',np.c_[stdb2_s2/stadev,stdb2_s1/stadev,stdb2_n2/stadev,stdb2_ha/stadev,stdb2_n1/stadev,stdb2_o1/stadev,stdb2_o2/stadev,broadresu.chisqr],('%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f','%8.5f'),header=('SII2\tSII1\tNII2\tHa\tNII1\tOI1\tOI2\tChi2'))
 
         # We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
         try:
@@ -254,6 +277,8 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
             maxfbN1 = twobroad_fit[np.where(abs(broadresu.values['mu_2']-l)<0.5)[0][0]] 
             maxfbHa = twobroad_fit[np.where(abs(broadresu.values['mu_3']-l)<0.5)[0][0]] 
             maxfbN2 = twobroad_fit[np.where(abs(broadresu.values['mu_4']-l)<0.5)[0][0]] 
+            maxfbO1 = twobroad_fit[np.where(abs(broadresu.values['mu_5']-l)<0.5)[0][0]] 
+            maxfbO2 = twobroad_fit[np.where(abs(broadresu.values['mu_6']-l)<0.5)[0][0]] 
         except IndexError:
             if broadresu.values['mu_0']>l[-1]:
                 print('ERROR: index out of range. Setting the flux values of the SI 1 line to 0.')
@@ -306,9 +331,9 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
                        header=('v_ref2\tev_ref2\tv_2ref2\tev_2ref2\tv_broadH\tev_broadH\tsig_ref2\tesig_ref2\tsig_2ref2\tesig_2ref2\tsig_broadH\tesig_broadH'))
 
         if os.path.exists(parentFold+'fluxes_2Cb_Ncomp.txt'): os.remove(parentFold+'fluxes_2Cb_Ncomp.txt')
-        np.savetxt(parentFold+'fluxes_2Cb_Ncomp.txt',np.c_[(sum(b2gaus1)+sum(b2gaus2))/sum(b2gaus4),sum(b2gaus3)/sum(b2gaus4),sum(b2gaus4),sum(b2gaus5)/sum(b2gaus4)],('%8.6f','%8.6f','%8.15f','%8.6f'),header=('SII_6731+6716\tNII_6584\tHalpha\tNII_6548'))
+        np.savetxt(parentFold+'fluxes_2Cb_Ncomp.txt',np.c_[(b2gaus1,b2gaus2,b2gaus3,b2gaus4,b2gaus5,b2gaus6,b2gaus7)],('%8.6f','%8.6f','%8.6f','%8.6f','%8.6f','%8.15f','%8.6f'),header=('SII_6731\tSII_6716\tNII_6584\tHalpha\tNII_6548\tOI_6300\tOI_6363'))
         if os.path.exists(parentFold+'fluxes_2Cb_Scomp.txt'): os.remove(parentFold+'fluxes_2Cb_Scomp.txt')
-        np.savetxt(parentFold+'fluxes_2Cb_Scomp.txt',np.c_[(sum(b2gaus8)+sum(b2gaus9))/sum(b2gaus11),sum(b2gaus10)/sum(b2gaus11),sum(b2gaus11),sum(b2gaus12)/sum(b2gaus11)],('%8.6f','%8.6f','%8.15f','%8.6f'),header=('SII_6731+6716\tNII_6584\tHalpha\tNII_6548'))
+        np.savetxt(parentFold+'fluxes_2Cb_Scomp.txt',np.c_[(b2gaus8,b2gaus9,b2gaus10,b2gaus11,b2gaus12,b2gaus13,b2gaus14)],('%8.6f','%8.6f','%8.6f','%8.6f','%8.6f','%8.15f','%8.6f'),header=('SII_6731\tSII_6716\tNII_6584\tHalpha\tNII_6548\tOI_6300\tOI_6363'))
 
 
         ########################### PLOT #############################
@@ -325,11 +350,15 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         plt.plot(l,b2gaus3+lin_data_fin,c='g',linestyle='-')
         plt.plot(l,b2gaus4+lin_data_fin,c='g',linestyle='-')
         plt.plot(l,b2gaus5+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,b2gaus6+lin_data_fin,c='g',linestyle='-')
+        plt.plot(l,b2gaus7+lin_data_fin,c='g',linestyle='-')
         plt.plot(l,b2gaus8+lin_data_fin,c='dodgerblue',linestyle='-')
         plt.plot(l,b2gaus9+lin_data_fin,c='dodgerblue',linestyle='-')
         plt.plot(l,b2gaus10+lin_data_fin,c='dodgerblue',linestyle='-')
         plt.plot(l,b2gaus11+lin_data_fin,c='dodgerblue',linestyle='-')
         plt.plot(l,b2gaus12+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,b2gaus13+lin_data_fin,c='dodgerblue',linestyle='-')
+        plt.plot(l,b2gaus14+lin_data_fin,c='dodgerblue',linestyle='-')
         plt.plot(l,b2gausb+lin_data_fin,c='darkviolet',linestyle='-')#,label='Broad component')
         plt.plot(l,twobroad_fit,'r-')
 	    
@@ -361,4 +390,4 @@ def broad_plot(parentFold,l,data_cor,meth,trigger,linresu,refresu,fullresu,broad
         frame1.text(2.2,max(data_cor)+0.05, textstr, fontsize=12,verticalalignment='top', bbox=props)
         plt.savefig(parentFold+'adj_met'+str(meth)+'_full_2comp_broadH.png',bbox_inches='tight',pad_inches=0.2)
    
-    return [vbS2,evbS2,sigbS2,esigbS2]
+        return [vbS2,evbS2,sigbS2,esigbS2,b2gaus1,b2gaus2,b2gaus3,b2gaus4,b2gaus5,b2gaus6,b2gaus7,b2gaus8,b2gaus9,b2gaus10,b2gaus11,b2gaus12,b2gaus13,b2gaus14,b2gausb]
