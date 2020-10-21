@@ -22,8 +22,7 @@ from plot_refer_lines import refer_plot
 from FitThirdComp import FitThirdComp
 from FirstFittingFunction import FirstFittingFunction
 
-fordername = 'results_nolim_SII_1610/'
-
+foldername = 'results_nolim_SII_2010_4/'
 
 # Conf
 CubePath  = "/mnt/data/lhermosa/MEGARA/DATA/NGC1052/MixCubeRV/PPXF/FinalSubtract/"
@@ -49,13 +48,14 @@ ang_to_pix = 0.28   # Angstrom per pixel - LR-R = 0.28 AA/pix
 fwhm = 2*np.sqrt(2*np.log(2)) # por sigma
 sigma_per_arc = 82  # km/s per arcsec derived from the FWHM per arcsec
 pix_to_v = 50.      # km/s per arcsec BASADO EN R = c/deltaV
+vsys = v_luz*z
 
 sig_inst = 0.654   # A  delta lambda (FWHM) = 3.6 A
 sig_inicial = 1.0
 
 meth = 'S'#input('Which method to be applied? ("S"/"O", not "M1"/"M2"): ')  # Method to fit
 
-GetParentFold = lambda path,x,y : path+str(galaxy)+'_'+str(galaxy2)+'_results/'
+GetParentFold = lambda path,x,y : path+str(x)+'_'+str(y)+'_results/'
 
 '''
 # Select all the files (sustitute of the previous lines)
@@ -83,7 +83,7 @@ def CreateFolders():
   for i in x:
     for ia in gal:
       try: 
-          DatProv = np.genfromtxt(CubePath+headName+str(i)+'_'+str(ia)+'.txt')[:,1]
+          DatProv = np.genfromtxt(CubePath+headName+'_'+str(i)+'_'+str(ia)+'.txt')[:,1]
       except IOError: 
           DatProv = np.zeros(len(l_init))
       datos[:,ia,i] = DatProv
@@ -92,7 +92,7 @@ def CreateFolders():
           print('Folder '+path+str(i)+'_'+str(ia)+'_results created in path')
   return datos
 
-datos = CreateFolders
+datos = CreateFolders()
 
 class FitOutput:
   def __init__(self, x, y):
