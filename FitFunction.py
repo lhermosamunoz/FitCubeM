@@ -215,7 +215,7 @@ def FitPoint(listxy):
         np.savetxt(parentFold+'fluxes_1C.txt',np.c_[sum(gaus1),sum(gaus2),sum(gaus3),sum(gaus4),sum(gaus5),sum(gaus6),sum(gaus7)],('%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f','%8.16f'),header=('SII_6731\tSII_6716\tNII_6584\tHalpha\tNII_6548\tOI_6300\tOI_6363'))
 
         # Saving the max flux of each line to do the final flux ma;
-        fitoutput.prov_fS2 = (sum(gaus1));fitoutput.prov_fS1 = (sum(gaus2));fitoutput.prov_fN2 = (sum(gaus3));fitoutput.prov_fHa = (sum(gaus4));fitoutput.prov_fN1 = (sum(gaus5));fitoutput.prov_fO1 = (sum(gaus6));fitoutput.prov_fO2 = (sum(gaus7))
+        #fitoutput.prov_fS2 = (sum(gaus1));fitoutput.prov_fS1 = (sum(gaus2));fitoutput.prov_fN2 = (sum(gaus3));fitoutput.prov_fHa = (sum(gaus4));fitoutput.prov_fN1 = (sum(gaus5));fitoutput.prov_fO1 = (sum(gaus6));fitoutput.prov_fO2 = (sum(gaus7))
 
         ############################ PLOT ############################
         plt.close('all')
@@ -269,16 +269,18 @@ def FitPoint(listxy):
         ##############################################################
 	##############################################################
         # Ask if a broad component is needed 
-        if stdf_n2 > 3 or stdf_ha > 3 or stdf_n1 > 3:
+        if stdf_n2/stadev > 3 or stdf_ha/stadev > 3 or stdf_n1/stadev > 3:
              trigger2 = 'Y'
         else:
              trigger2 = 'N'
-        if galaxy >= 15 and galaxy <= 20 and galaxy2 >= 12 and galaxy2 <= 16: trigger2 = 'Y' #33  30
+        #trigger2 = 'N'
+        #if galaxy >= 15 and galaxy <= 20 and galaxy2 >= 12 and galaxy2 <= 16: trigger2 = 'Y' #33  30
         # Ask if a broad component is needed 
         if trigger2 == 'N':
             print('The final plots are already printed and have been already saved!')
             print('No broad component from the BLR added to the fit of this spaxel')
             # Append all the values to the corresponding vector
+            fitoutput.prov_fS2 = (sum(gaus1));fitoutput.prov_fS1 = (sum(gaus2));fitoutput.prov_fN2 = (sum(gaus3));fitoutput.prov_fHa = (sum(gaus4));fitoutput.prov_fN1 = (sum(gaus5));fitoutput.prov_fO1 = (sum(gaus6));fitoutput.prov_fO2 = (sum(gaus7))
             fitoutput.prov_SB = (np.nan);fitoutput.prov_eSB = (np.nan);fitoutput.prov_VB = (np.nan);fitoutput.prov_eVB = (np.nan)
             np.savetxt(parentFold+'fit1comp_best_values.txt',np.c_[l,resu1.data,resu1.best_fit,lin_data_fin,gaus1,gaus2,gaus3,gaus4,gaus5,gaus6,gaus7],fmt=('%5.6f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f','%5.10f'),header=('Wavelength\tReal_data\tBest_fit\tLineal_fit\tNarrow_SII6731\tNarrow_SII6716\tNarrow_NII6584\tNarrow_Halpha\tNarrow_NII6548\tNarrow_OI6300\tNarrow_OI6363'))
         elif trigger2 == 'Y':
@@ -302,13 +304,15 @@ def FitPoint(listxy):
                 fh.write(broadresu.fit_report())
  
             # PLOT AND PRINT THE RESULTS 
-            refer2 = broad_plot(parentFold,l,data_cor,meth,trigger,linresu,oneresu,fin_fit,broadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,std0,std1)
+            refer2 = broad_plot(parentFold,l,data_cor,meth,trigger,linresu,oneresu,fin_fit,broadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,std0,std1)
             broad_fit = broadresu.best_fit
             # Save the results in the corresponding array
             fitoutput.prov_VB = (refer2[0])
             fitoutput.prov_eVB = (refer2[1])
             fitoutput.prov_SB = (refer2[2])
             fitoutput.prov_eSB = (refer2[3])
+            fitoutput.prov_fS2 = (sum(refer[4]));fitoutput.prov_fS1 = (sum(refer2[5]));fitoutput.prov_fN2 = (sum(refer2[6]));fitoutput.prov_fHa = (sum(refer2[7]));fitoutput.prov_fN1 = (sum(refer2[8]));fitoutput.prov_fO1 = (sum(refer2[9]));fitoutput.prov_fO2 = (sum(refer2[10]))
+            print('Info saved for broad component with 1 Narrow fit of this spaxel')
 
     ##############################################################
     ##############################################################
@@ -585,12 +589,12 @@ def FitPoint(listxy):
             fitoutput.prov_VN2 = (v32S2);fitoutput.prov_eVN2 = (ev32S2);fitoutput.prov_SN2 = (sig32S2);fitoutput.prov_eSN2 = (esig32S2);fitoutput.prov_VN = (v30S2);fitoutput.prov_eVN = (ev30S2);fitoutput.prov_SN = (sig30S2);fitoutput.prov_eSN = (esig30S2);fitoutput.prov_VS = (v31S2);fitoutput.prov_eVS = (ev31S2);fitoutput.prov_SS = (sig31S2);fitoutput.prov_eSS = (esig31S2);fitoutput.prov_notSN = (T3CResu.params['sig_3']);fitoutput.prov_noteSN = (T3CResu.params['sig_3'].stderr);fitoutput.prov_notVN = (T3CResu.params['mu_3']);fitoutput.prov_noteVN = (T3CResu.params['mu_3'].stderr)
 
 	##############################################################
-        if stdf2_n2 > 3 or stdf2_ha > 3 or stdf2_n1 > 3: 
+        if stdf2_n2/stadev > 3 or stdf2_ha/stadev > 3 or stdf2_n1/stadev > 3: 
             trigger2 = 'Y'
         else: 
             trigger2 = 'N'
-        if galaxy >= 15 and galaxy <= 20 and galaxy2 >= 12 and galaxy2 <= 16: trigger2 = 'Y' #33  30
-        #trigger2 = 'N'
+        #if galaxy >= 15 and galaxy <= 20 and galaxy2 >= 12 and galaxy2 <= 16: trigger2 = 'Y' #33  30
+        trigger2 = 'N'
 	#trigger2 = input('Do the fit needs a broad Halpha component? ("Y"/"N"): ')
         #fitoutput.prov_eSN = (esig2S2),fitoutput.prov_SN = (sig2S2),fitoutput.prov_VN = (v2S2),fitoutput.prov_eVN = (ev2S2),fitoutput.prov_eSS = (esig20S2),fitoutput.prov_SS = (sig20S2),fitoutput.prov_VS = (v20S2),fitoutput.prov_eVS = (ev20S2),fitoutput.prov_notSN = (twocompresu.best_values['sig_3']),fitoutput.prov_noteSN = (twocompresu.params['sig_3'].stderr),prov_notVN.append(twocompresu.params['mu_3']),fitoutput.prov_noteVN = (twocompresu.params['mu_3'].stderr)
 
@@ -627,13 +631,14 @@ def FitPoint(listxy):
                 fh.write(twobroadresu.fit_report())
 
 	    # PLOT AND PRINT THE RESULTS 
-            refer2 = broad_plot(parentFold,l,data_cor,meth,trigger,linresu,tworesu,fin2_fit,twobroadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,std0,std1)
+            refer2 = broad_plot(parentFold,l,data_cor,meth,trigger,linresu,tworesu,fin2_fit,twobroadresu,l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,std0,std1)
             twobroad_fit = twobroadresu.best_fit
             # Save the results in the corresponding array
             fitoutput.prov_VB = (refer2[0])
             fitoutput.prov_eVB = (refer2[1])
             fitoutput.prov_SB = (refer2[2])
             fitoutput.prov_eSB = (refer2[3])
+            fitoutput.prov_fS2 = (sum(refer2[4]));fitoutput.prov_fS1 = (sum(refer2[5]));fitoutput.prov_fN2 = (sum(refer2[6]));fitoutput.prov_fHa = (sum(refer2[7]));fitoutput.prov_fN1 = (sum(refer2[8]));fitoutput.prov_fO1 = (sum(refer2[9]));fitoutput.prov_fO2 = (sum(refer2[10]));fitoutput.prov_fSHa = (sum(refer2[14]));fitoutput.prov_fSN1 = (sum(refer2[15]));fitoutput.prov_fSN2 = (sum(refer2[13]));fitoutput.prov_fSS1 = (sum(refer2[12]));fitoutput.prov_fSS2 = (sum(refer2[11]));fitoutput.prov_fSO1 = (sum(refer2[16]));fitoutput.prov_fSO2 = (sum(refer2[17]))
 
     else: 
         print('Please use "Y" or "N"')
