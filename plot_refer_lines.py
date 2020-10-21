@@ -84,10 +84,10 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
 	    ixSTD2 = l[np.where(l > oneresu.values['mu_0'])[0][0]] + 1.5*oneresu.values['sig_0']
 	    ixSTD1_2 = l[np.where(l > oneresu.values['mu_1'])[0][0]] - 1.5*oneresu.values['sig_1']
 	    ixSTD2_2 = l[np.where(l > oneresu.values['mu_1'])[0][0]] + 1.5*oneresu.values['sig_1']
-	    #std_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-onefin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
-	    #std_1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]]-onefin_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]])
-	    std_2 = np.std(data_cor[np.where(l<ixSTD1)[0][-1]:np.where(l>ixSTD2)[0][0]]-onefin_fit[np.where(l<ixSTD1)[0][-1]:np.where(l>ixSTD2)[0][0]])
-	    std_1 = np.std(data_cor[np.where(l<ixSTD1_2)[0][-1]:np.where(l>ixSTD2_2)[0][0]]-onefin_fit[np.where(l<ixSTD1_2)[0][-1]:np.where(l>ixSTD2_2)[0][0]])
+	    std_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-onefin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
+	    std_1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-onefin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
+	    #std_2 = np.std(data_cor[np.where(l<ixSTD1)[0][-1]:np.where(l>ixSTD2)[0][0]]-onefin_fit[np.where(l<ixSTD1)[0][-1]:np.where(l>ixSTD2)[0][0]])
+	    #std_1 = np.std(data_cor[np.where(l<ixSTD1_2)[0][-1]:np.where(l>ixSTD2_2)[0][0]]-onefin_fit[np.where(l<ixSTD1_2)[0][-1]:np.where(l>ixSTD2_2)[0][0]])
 	    ep_1 = std_1/stadev
 	    ep_2 = std_2/stadev
 	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 1 component is... ')
@@ -98,10 +98,10 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
 	    ixSTD2 = l[np.where(l > tworesu.values['mu_0'])[0][0]] + 1.5*tworesu.values['sig_0']
 	    ixSTD1_2 = l[np.where(l > tworesu.values['mu_1'])[0][0]] - 1.5*tworesu.values['sig_1']
 	    ixSTD2_2 = l[np.where(l > tworesu.values['mu_1'])[0][0]] + 1.5*tworesu.values['sig_1']
-	    std2_2 = np.std(data_cor[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]]-twofin_fit[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]])
-	    std2_1 = np.std(data_cor[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]]-twofin_fit[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]])
-	    #std2_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-twofin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
-	    #std2_1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]]-twofin_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]])
+	    #std2_2 = np.std(data_cor[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]]-twofin_fit[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]])
+	    #std2_1 = np.std(data_cor[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]]-twofin_fit[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]])
+	    std2_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-twofin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
+	    std2_1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-twofin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
 	    ep2_1 = std2_1/stadev
 	    ep2_2 = std2_2/stadev
 	    print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 2 components is... ')
@@ -113,10 +113,10 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
 	    ixSTD2 = l[np.where(l > threeresu.values['mu_0'])[0][0]] + 1.5*threeresu.values['sig_0']
 	    ixSTD1_2 = l[np.where(l > threeresu.values['mu_1'])[0][0]] - 1.5*threeresu.values['sig_1']
 	    ixSTD2_2 = l[np.where(l > threeresu.values['mu_1'])[0][0]] + 1.5*threeresu.values['sig_1']
-	    std3_2 = np.std(data_cor[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]]-threefin_fit[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]])
-	    std3_1 = np.std(data_cor[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]]-threefin_fit[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]])
-            #std3_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10]-threefin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]+10])
-            #std3_1 = np.std(data_cor[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]]-threefin_fit[np.where(l<l3)[0][-1]-10:np.where(l>l4)[0][0]])
+	    #std3_2 = np.std(data_cor[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]]-threefin_fit[np.where(l>ixSTD1)[0][0]:np.where(l<ixSTD2)[0][-1]])
+	    #std3_1 = np.std(data_cor[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]]-threefin_fit[np.where(l>ixSTD1_2)[0][0]:np.where(l<ixSTD2_2)[0][-1]])
+            std3_2 = np.std(data_cor[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]]-threefin_fit[np.where(l<l1)[0][-1]:np.where(l>l2)[0][0]])
+            std3_1 = np.std(data_cor[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]]-threefin_fit[np.where(l<l3)[0][-1]:np.where(l>l4)[0][0]])
             ep3_1 = std3_1/stadev
             ep3_2 = std3_2/stadev
             print('The condition for each line (in the same order as before) needs to be std_line < 3*std_cont --> for 3 components is... ')
@@ -153,12 +153,12 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
 
 
 	# We determine the maximum flux of the fit for all the lines, and the velocity and sigma components
-	maxN1 = onefin_fit[np.where(abs(oneresu.values['mu_1']-l)<1.8)[0][0]]
-	maxN2 = onefin_fit[np.where(abs(oneresu.values['mu_0']-l)<1.8)[0][0]]
-	max2N1 = twofin_fit[np.where(abs(tworesu.values['mu_1']-l)<1.8)[0][0]]
-	max2N2 = twofin_fit[np.where(abs(tworesu.values['mu_0']-l)<1.8)[0][0]]
-	max3N1 = threefin_fit[np.where(abs(threeresu.values['mu_1']-l)<1.8)[0][0]]
-	max3N2 = threefin_fit[np.where(abs(threeresu.values['mu_0']-l)<1.8)[0][0]]
+	maxN1 = onefin_fit[np.where(abs(oneresu.values['mu_1']-l)<1.0)[0][0]]
+	maxN2 = onefin_fit[np.where(abs(oneresu.values['mu_0']-l)<1.0)[0][0]]
+	max2N1 = twofin_fit[np.where(abs(tworesu.values['mu_1']-l)<1.0)[0][0]]
+	max2N2 = twofin_fit[np.where(abs(tworesu.values['mu_0']-l)<1.0)[0][0]]
+	max3N1 = threefin_fit[np.where(abs(threeresu.values['mu_1']-l)<1.0)[0][0]]
+	max3N2 = threefin_fit[np.where(abs(threeresu.values['mu_0']-l)<1.0)[0][0]]
 	# one component
 	vS2 = v_luz*((oneresu.values['mu_0']-l_SII_2)/l_SII_2)
 	sigS2 = pix_to_v*np.sqrt(oneresu.values['sig_0']**2-sig_inst**2)
@@ -332,6 +332,4 @@ def refer_plot(parentFold,l,data_cor,meth,linresu,oneresu,tworesu,threeresu,l1,l
         plt.savefig(parentFold+'adj_met'+str(meth)+'_ref_3comp.png')
 
 
-
 	return ep_1,ep_2,ep2_1,ep2_2,ep3_1,ep3_2
-
