@@ -7,7 +7,6 @@ nSlots = 4
 inputs = []
 for iy in gal:
   for ix in x:
-    print('Done {:.2f} %'.format(100*((ix+1)+(iy*33))/990.))
     if not CheckFit(ix,iy):
       inputs.append([ix,iy,meth])
 
