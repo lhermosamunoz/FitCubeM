@@ -49,6 +49,50 @@ def threegaussian(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_2,sig_2,amp_2
     y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_2,sig_2,amp_2)
     return y
 
+# Function to create the gaussian and the linear one component fit for the reference lines only
+def fourgaussian(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_5,sig_5,amp_5,mu_6,sig_6,amp_6):
+    '''
+    Function to fit the reference lines to a gaussian + linear with only one component.
+    The parameters to introduce have to be the initial guesses. 
+    x - values for the fit
+    params: 1. mu - mean of the distribution
+	    2. sigma - stddev
+	    3. amplitude
+    '''
+    y = np.zeros_like(x)
+    y = y + (slop*x+intc)
+    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_5,sig_5,amp_5) + gaussian(x,mu_6,sig_6,amp_6)
+    return y
+
+# Function to create the gaussian and the linear one component fit for the reference lines only
+def eightgaussian(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_5,sig_5,amp_5,mu_25,sig_25,amp_25,mu_6,sig_6,amp_6,mu_26,sig_26,amp_26):
+    '''
+    Function to fit the reference lines to a gaussian + linear with only one component.
+    The parameters to introduce have to be the initial guesses. 
+    x - values for the fit
+    params: 1. mu - mean of the distribution
+            2. sigma - stddev
+            3. amplitude
+    '''
+    y = np.zeros_like(x)
+    y = y + (slop*x+intc)
+    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_5,sig_5,amp_5) + gaussian(x,mu_6,sig_6,amp_6) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_25,sig_25,amp_25) + gaussian(x,mu_26,sig_26,amp_26)
+    return y
+
+# Function to create the gaussian and the linear one component fit for the reference lines only
+def twelvegaussian(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21,mu_30,sig_30,amp_30,mu_31,sig_31,amp_31,mu_5,sig_5,amp_5,mu_25,sig_25,amp_25,mu_35,sig_35,amp_35,mu_6,sig_6,amp_6,mu_26,sig_26,amp_26,mu_36,sig_36,amp_36):
+    '''
+    Function to fit the reference lines to a gaussian + linear with three components.
+    The parameters to introduce have to be the initial guesses. 
+    x - values for the fit
+    params: 1. mu - mean of the distribution
+            2. sigma - stddev
+            3. amplitude
+    '''
+    y = np.zeros_like(x)
+    y = y + (slop*x+intc)
+    y = y + gaussian(x,mu_0,sig_0,amp_0) + gaussian(x,mu_1,sig_1,amp_1) + gaussian(x,mu_5,sig_5,amp_5) + gaussian(x,mu_6,sig_6,amp_6) + gaussian(x,mu_20,sig_20,amp_20) + gaussian(x,mu_21,sig_21,amp_21) + gaussian(x,mu_25,sig_25,amp_25) + gaussian(x,mu_26,sig_26,amp_26) + gaussian(x,mu_30,sig_30,amp_30) + gaussian(x,mu_31,sig_31,amp_31) + gaussian(x,mu_35,sig_35,amp_35) + gaussian(x,mu_36,sig_36,amp_36)
+    return y
 
 # Function to create the gaussian and the linear two component fit for the reference lines only
 def funcSII2comp(x,slop,intc,mu_0,sig_0,amp_0,mu_1,sig_1,amp_1,mu_20,sig_20,amp_20,mu_21,sig_21,amp_21):
